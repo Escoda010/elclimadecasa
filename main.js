@@ -208,12 +208,15 @@
     if (!grid) return;
     var cards = $$("[data-product-id]", grid);
     var countEl = $(".results-count");
+    var category = grid.getAttribute("data-category") || "deshumidificadores";
 
     function applyFilters() {
       var sortBy = ($("#filter-sort") || {}).value || "relevancia";
       var maxPrice = parseFloat(($("#filter-price") || {}).value || "0");
       var minCap = parseFloat(($("#filter-capacity") || {}).value || "0");
       var maxNoise = parseFloat(($("#filter-noise") || {}).value || "0");
+      var minPotencia = parseFloat(($("#filter-potencia") || {}).value || "0");
+      var filterTipo = ($("#filter-tipo") || {}).value || "";
 
       var visible = 0;
       cards.forEach(function (card) {
@@ -225,6 +228,8 @@
         if (maxPrice > 0 && price > maxPrice) show = false;
         if (minCap > 0 && (prod.capacidad_litros_dia || 0) < minCap) show = false;
         if (maxNoise > 0 && (prod.ruido_db || 999) > maxNoise) show = false;
+        if (minPotencia > 0 && (prod.potencia_w || 0) < minPotencia) show = false;
+        if (filterTipo && (prod.subcategory || "") !== filterTipo) show = false;
         card.style.display = show ? "" : "none";
         if (show) visible++;
       });
@@ -240,6 +245,7 @@
           if (sortBy === "precio-asc") return (pa.discountedPrice || pa.retailPrice || 0) - (pb.discountedPrice || pb.retailPrice || 0);
           if (sortBy === "precio-desc") return (pb.discountedPrice || pb.retailPrice || 0) - (pa.discountedPrice || pa.retailPrice || 0);
           if (sortBy === "capacidad") return (pb.capacidad_litros_dia || 0) - (pa.capacidad_litros_dia || 0);
+          if (sortBy === "potencia") return (pb.potencia_w || 0) - (pa.potencia_w || 0);
           if (sortBy === "silencio") return (pa.ruido_db || 99) - (pb.ruido_db || 99);
           if (sortBy === "valoracion") return (pb.valoracion_media || 0) - (pa.valoracion_media || 0);
           return 0;
@@ -355,16 +361,15 @@
       });
       html += '</tr>';
 
-      var specs = [
-        { label: "Capacidad", key: "capacidad_litros_dia", unit: " L/día", best: "max" },
-        { label: "Potencia", key: "potencia_w", unit: " W", best: "min" },
+      var dbSpecs = (DB.compareSpecs || {});
+      var cats = prods.map(function(p){ return p.category; });
+      var allSame = cats.every(function(c){ return c === cats[0]; });
+      var specs = (allSame && dbSpecs[cats[0]]) ? dbSpecs[cats[0]] : [
+        { label: "Potencia", key: "potencia_w", unit: " W", best: "max" },
         { label: "Cobertura", key: "cobertura_m2", unit: " m²", best: "max" },
-        { label: "Ruido", key: "ruido_db", unit: " dB", best: "min" },
-        { label: "Depósito", key: "deposito_litros", unit: " L", best: "max" },
         { label: "Peso", key: "peso_kg", unit: " kg", best: "min" },
         { label: "Temporizador", key: "temporizador", type: "bool" },
-        { label: "Control app", key: "control_app", type: "bool" },
-        { label: "Desagüe continuo", key: "desague_continuo", type: "bool" }
+        { label: "Control app", key: "control_app", type: "bool" }
       ];
 
       html += '<tr class="spec-group-row"><td colspan="' + (prods.length + 1) + '">Especificaciones técnicas</td></tr>';

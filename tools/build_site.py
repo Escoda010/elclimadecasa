@@ -31,7 +31,8 @@ def product_img(p, idx=0, cls="", depth=0):
         alt = esc(p["name"])
         c = f' class="{cls}"' if cls else ""
         return f'<img src="{src}" alt="{alt}" loading="lazy" width="400" height="400"{c}>'
-    return '<div class="img-placeholder">💧</div>'
+    icon = CATEGORY_CONFIG.get(p.get("category", ""), {}).get("icon", "🌡️")
+    return f'<div class="img-placeholder">{icon}</div>'
 
 def stars_html(rating):
     full = int(rating)
@@ -40,13 +41,151 @@ def stars_html(rating):
     if half: s += "½"
     return s
 
+# ── Category configuration ─────────────────────────────────
+
+SLUG_MAP = {
+    "dh-001": "pro-breeze-omnidry-20l",
+    "dh-002": "pro-breeze-compacto-12l",
+    "dh-003": "delonghi-ariadry-dexd216rf",
+    "cal-001": "rowenta-instant-comfort-aqua-so6510",
+    "cal-002": "cecotec-ready-warm-10100-smart-ceramic",
+    "cal-003": "pro-breeze-mini-ceramico-2000w",
+    "cal-004": "delonghi-trrs-1225-radia-s",
+    "cal-005": "orbegozo-rre-1310",
+    "cal-006": "cecotec-ready-warm-5750-space-360",
+    "cal-007": "rowenta-vectissimo-ii-co3030",
+    "cal-008": "cecotec-ready-warm-6650-crystal-connection",
+    "cal-009": "orbegozo-bp-5003",
+}
+
+SPEC_FIELDS_DH = [
+    ("Rendimiento", [
+        ("Capacidad de extracción", "capacidad_litros_dia", " L/día"),
+        ("Potencia", "potencia_w", " W"),
+        ("Cobertura máxima", "cobertura_m2", " m²"),
+        ("Nivel de ruido", "ruido_db", " dB"),
+    ]),
+    ("Depósito y drenaje", [
+        ("Capacidad del depósito", "deposito_litros", " L"),
+        ("Desagüe continuo", "desague_continuo", None),
+    ]),
+    ("Funciones", [
+        ("Modos de funcionamiento", "modos_funcionamiento", ""),
+        ("Temporizador", "temporizador", None),
+        ("Control remoto", "control_remoto", None),
+        ("Control por app", "control_app", None),
+        ("Filtro lavable", "filtro_lavable", None),
+    ]),
+    ("Dimensiones", [
+        ("Peso", "peso_kg", " kg"),
+        ("Dimensiones", "dimensiones_cm", " cm"),
+        ("Refrigerante", "refrigerante", ""),
+    ]),
+]
+
+SPEC_FIELDS_CAL = [
+    ("Rendimiento", [
+        ("Tipo de calefactor", "tipo_calefactor", ""),
+        ("Potencia máxima", "potencia_w", " W"),
+        ("Niveles de potencia", "niveles_potencia", ""),
+        ("Cobertura estimada", "cobertura_m2", " m²"),
+    ]),
+    ("Funciones", [
+        ("Termostato", "termostato", None),
+        ("Temporizador", "temporizador", None),
+        ("Oscilación", "oscilacion", None),
+        ("Control remoto", "control_remoto", None),
+        ("Control por app", "control_app", None),
+        ("Protección baño", "proteccion_bano", ""),
+        ("Antivuelco", "antivuelco", None),
+        ("Anti-heladas", "anti_heladas", None),
+    ]),
+    ("Dimensiones", [
+        ("Peso", "peso_kg", " kg"),
+        ("Dimensiones", "dimensiones_cm", " cm"),
+    ]),
+]
+
+COMPARE_SPECS_DH = [
+    {"label": "Capacidad", "key": "capacidad_litros_dia", "unit": " L/día", "best": "max"},
+    {"label": "Potencia", "key": "potencia_w", "unit": " W", "best": "min"},
+    {"label": "Cobertura", "key": "cobertura_m2", "unit": " m²", "best": "max"},
+    {"label": "Ruido", "key": "ruido_db", "unit": " dB", "best": "min"},
+    {"label": "Depósito", "key": "deposito_litros", "unit": " L", "best": "max"},
+    {"label": "Peso", "key": "peso_kg", "unit": " kg", "best": "min"},
+    {"label": "Temporizador", "key": "temporizador", "type": "bool"},
+    {"label": "Control app", "key": "control_app", "type": "bool"},
+    {"label": "Desagüe continuo", "key": "desague_continuo", "type": "bool"},
+]
+
+COMPARE_SPECS_CAL = [
+    {"label": "Tipo", "key": "tipo_calefactor", "unit": ""},
+    {"label": "Potencia", "key": "potencia_w", "unit": " W", "best": "max"},
+    {"label": "Cobertura", "key": "cobertura_m2", "unit": " m²", "best": "max"},
+    {"label": "Peso", "key": "peso_kg", "unit": " kg", "best": "min"},
+    {"label": "Termostato", "key": "termostato", "type": "bool"},
+    {"label": "Temporizador", "key": "temporizador", "type": "bool"},
+    {"label": "Oscilación", "key": "oscilacion", "type": "bool"},
+    {"label": "Control remoto", "key": "control_remoto", "type": "bool"},
+    {"label": "Control app", "key": "control_app", "type": "bool"},
+    {"label": "Antivuelco", "key": "antivuelco", "type": "bool"},
+]
+
+SUBCATEGORIES_CAL = [
+    ("ceramico", "Cerámicos"),
+    ("radiador-aceite", "Radiadores de aceite"),
+    ("panel", "Paneles / Convectores"),
+    ("halogeno-cuarzo", "Halógenas / Cuarzo"),
+]
+
+CATEGORY_CONFIG = {
+    "deshumidificadores": {
+        "title": "Deshumidificadores",
+        "icon": "💧",
+        "slug": "deshumidificadores",
+        "nav_key": "deshumidificadores",
+        "spec_fields": SPEC_FIELDS_DH,
+        "compare_specs": COMPARE_SPECS_DH,
+        "guide_slug": "guia-deshumidificadores",
+        "guide_title": "Guía de compra de deshumidificadores",
+        "meta_desc": "Los mejores deshumidificadores del mercado. Compara modelos por capacidad, precio, ruido y más.",
+        "category_desc": "Compara los mejores deshumidificadores del mercado. Filtros por precio, capacidad y nivel de ruido para encontrar el modelo perfecto para tu hogar.",
+        "subcategories": [],
+        "chips": lambda p: [
+            f'{p.get("capacidad_litros_dia","—")} L/día',
+            f'{p.get("cobertura_m2","—")} m²',
+            f'{p.get("ruido_db","—")} dB',
+        ],
+    },
+    "calefactores": {
+        "title": "Calefactores",
+        "icon": "🔥",
+        "slug": "calefactores",
+        "nav_key": "calefactores",
+        "spec_fields": SPEC_FIELDS_CAL,
+        "compare_specs": COMPARE_SPECS_CAL,
+        "guide_slug": "guia-calefactores",
+        "guide_title": "Guía de compra de calefactores",
+        "meta_desc": "Los mejores calefactores para tu hogar: cerámicos, radiadores de aceite, paneles y estufas de cuarzo. Compara modelos y elige el tuyo.",
+        "category_desc": "Compara los mejores calefactores del mercado. Filtros por precio, potencia y tipo para encontrar el calefactor perfecto para tu hogar.",
+        "subcategories": SUBCATEGORIES_CAL,
+        "chips": lambda p: [
+            p.get("tipo_calefactor", "—"),
+            f'{p.get("potencia_w","—")} W',
+            f'{p.get("cobertura_m2","—")} m²',
+        ],
+    },
+}
+
+# ── Shared HTML builders ────────────────────────────────────
+
 def nav_html(active="", depth=0):
     prefix = "../" * depth
     links = [
         ("index.html", "Inicio", "inicio"),
         ("deshumidificadores/index.html", "Deshumidificadores", "deshumidificadores"),
+        ("calefactores/index.html", "Calefactores", "calefactores"),
         ("#", "Aires Acondicionados", "aires"),
-        ("#", "Calefactores", "calefactores"),
         ("#", "Ventiladores", "ventiladores"),
         ("#", "Purificadores", "purificadores"),
         ("comparador.html", "Comparador", "comparador"),
@@ -86,8 +225,8 @@ def footer_html(depth=0):
         <h4>Categorías</h4>
         <ul class="footer-links">
           <li><a href="{prefix}deshumidificadores/index.html">Deshumidificadores</a></li>
+          <li><a href="{prefix}calefactores/index.html">Calefactores</a></li>
           <li><a href="#">Aires Acondicionados</a></li>
-          <li><a href="#">Calefactores</a></li>
           <li><a href="#">Ventiladores</a></li>
           <li><a href="#">Purificadores</a></li>
         </ul>
@@ -96,7 +235,8 @@ def footer_html(depth=0):
         <h4>Recursos</h4>
         <ul class="footer-links">
           <li><a href="{prefix}comparador.html">Comparador</a></li>
-          <li><a href="{prefix}guia-deshumidificadores.html">Guía de compra</a></li>
+          <li><a href="{prefix}guia-deshumidificadores.html">Guía deshumidificadores</a></li>
+          <li><a href="{prefix}guia-calefactores.html">Guía calefactores</a></li>
         </ul>
       </div>
       <div>
@@ -151,40 +291,19 @@ def scripts_html(depth=0):
 </body>
 </html>'''
 
-SPEC_FIELDS = [
-    ("Rendimiento", [
-        ("Capacidad de extracción", "capacidad_litros_dia", " L/día"),
-        ("Potencia", "potencia_w", " W"),
-        ("Cobertura máxima", "cobertura_m2", " m²"),
-        ("Nivel de ruido", "ruido_db", " dB"),
-    ]),
-    ("Depósito y drenaje", [
-        ("Capacidad del depósito", "deposito_litros", " L"),
-        ("Desagüe continuo", "desague_continuo", None),
-    ]),
-    ("Funciones", [
-        ("Modos de funcionamiento", "modos_funcionamiento", ""),
-        ("Temporizador", "temporizador", None),
-        ("Control remoto", "control_remoto", None),
-        ("Control por app", "control_app", None),
-        ("Filtro lavable", "filtro_lavable", None),
-    ]),
-    ("Dimensiones", [
-        ("Peso", "peso_kg", " kg"),
-        ("Dimensiones", "dimensiones_cm", " cm"),
-        ("Refrigerante", "refrigerante", ""),
-    ]),
-]
+# ── Spec table ──────────────────────────────────────────────
 
 def spec_table_html(p):
+    cat = p.get("category", "deshumidificadores")
+    fields = CATEGORY_CONFIG.get(cat, {}).get("spec_fields", SPEC_FIELDS_DH)
     rows = ""
-    for group_name, fields in SPEC_FIELDS:
+    for group_name, field_list in fields:
         rows += f'<tr class="spec-group-header"><td colspan="2">{esc(group_name)}</td></tr>\n'
-        for label, key, unit in fields:
+        for label, key, unit in field_list:
             val = p.get(key)
             if unit is None:
                 cell = bool_html(val)
-            elif val is None:
+            elif val is None or val == "":
                 cell = "—"
             else:
                 cell = f"{esc(val)}{unit}"
@@ -214,16 +333,16 @@ def pros_cons_html(p):
   </div>
 </div>'''
 
-SLUG_MAP = {
-    "dh-001": "pro-breeze-omnidry-20l",
-    "dh-002": "pro-breeze-compacto-12l",
-    "dh-003": "delonghi-ariadry-dexd216rf",
-}
+# ── Slug ────────────────────────────────────────────────────
 
 def product_slug(p):
     return SLUG_MAP.get(p["id"], p["id"])
 
+# ── Product page (ficha) ───────────────────────────────────
+
 def build_ficha(p, all_products):
+    cat = p.get("category", "deshumidificadores")
+    cfg = CATEGORY_CONFIG.get(cat, CATEGORY_CONFIG["deshumidificadores"])
     slug = product_slug(p)
     price = p.get("discountedPrice") or p.get("retailPrice")
     has_offer = p.get("discountedPrice") and p.get("retailPrice") and p["discountedPrice"] < p["retailPrice"]
@@ -235,7 +354,7 @@ def build_ficha(p, all_products):
         pct = round(100 * (1 - p["discountedPrice"] / p["retailPrice"]))
         offer_badge = f'<span class="badge badge-offer">-{pct}%</span>'
 
-    similar = [x for x in all_products if x["id"] != p["id"] and x["category"] == p["category"]]
+    similar = [x for x in all_products if x["id"] != p["id"] and x["category"] == cat]
 
     similar_html = ""
     if similar:
@@ -257,13 +376,13 @@ def build_ficha(p, all_products):
 </section>'''
 
     content = f'''{head_html(p["name"], p.get("description",""), depth=1)}
-{nav_html("deshumidificadores", depth=1)}
+{nav_html(cfg["nav_key"], depth=1)}
 <main id="main">
 <section class="ficha">
   <div class="container">
     <nav class="breadcrumb">
       <a href="../index.html">Inicio</a> <span class="breadcrumb-sep">/</span>
-      <a href="index.html">Deshumidificadores</a> <span class="breadcrumb-sep">/</span>
+      <a href="index.html">{esc(cfg["title"])}</a> <span class="breadcrumb-sep">/</span>
       <span>{esc(p["name"])}</span>
     </nav>
 
@@ -332,15 +451,21 @@ def build_ficha(p, all_products):
 {footer_html(depth=1)}
 {scripts_html(depth=1)}'''
 
-    outpath = os.path.join(BASE, "deshumidificadores", f"{slug}.html")
+    outdir = os.path.join(BASE, cfg["slug"])
+    os.makedirs(outdir, exist_ok=True)
+    outpath = os.path.join(outdir, f"{slug}.html")
     with open(outpath, "w", encoding="utf-8") as f:
         f.write(content)
-    print(f"  ✅ Ficha: deshumidificadores/{slug}.html")
+    print(f"  ✅ Ficha: {cfg['slug']}/{slug}.html")
 
-def build_category(products):
-    dh = [p for p in products if p["category"] == "deshumidificadores"]
+# ── Category index page ────────────────────────────────────
+
+def build_category(products, cat_key):
+    cfg = CATEGORY_CONFIG[cat_key]
+    cat_products = [p for p in products if p["category"] == cat_key]
+
     cards = ""
-    for p in dh:
+    for p in cat_products:
         slug = product_slug(p)
         price = p.get("discountedPrice") or p.get("retailPrice")
         has_offer = p.get("discountedPrice") and p.get("retailPrice") and p["discountedPrice"] < p["retailPrice"]
@@ -348,6 +473,9 @@ def build_category(products):
         if has_offer:
             pct = round(100 * (1 - p["discountedPrice"] / p["retailPrice"]))
             badge = f'<span class="badge badge-offer">-{pct}%</span>'
+
+        chips = cfg["chips"](p)
+        chips_html = "".join(f'<span class="product-card-chip">{esc(c)}</span>' for c in chips)
 
         cards += f'''<article class="product-card reveal" data-product-id="{p["id"]}">
   <div class="product-card-img">
@@ -358,9 +486,7 @@ def build_category(products):
     <div class="product-card-brand">{esc(p["marca"])}</div>
     <h3 class="product-card-name"><a href="{slug}.html">{esc(p["name"])}</a></h3>
     <div class="product-card-highlight">
-      <span class="product-card-chip">{p.get("capacidad_litros_dia","—")} L/día</span>
-      <span class="product-card-chip">{p.get("cobertura_m2","—")} m²</span>
-      <span class="product-card-chip">{p.get("ruido_db","—")} dB</span>
+      {chips_html}
     </div>
     <p class="product-card-desc">{esc(p.get("description",""))}</p>
     <div class="product-card-footer">
@@ -374,23 +500,9 @@ def build_category(products):
   </div>
 </article>\n'''
 
-    content = f'''{head_html("Deshumidificadores", "Los mejores deshumidificadores del mercado. Compara modelos por capacidad, precio, ruido y más.", depth=1)}
-{nav_html("deshumidificadores", depth=1)}
-<main id="main">
-<section class="page-header">
-  <div class="container">
-    <nav class="breadcrumb">
-      <a href="../index.html">Inicio</a> <span class="breadcrumb-sep">/</span>
-      <span>Deshumidificadores</span>
-    </nav>
-    <h1>Deshumidificadores</h1>
-    <p style="color:var(--text-muted);max-width:600px">Compara los mejores deshumidificadores del mercado. Filtros por precio, capacidad y nivel de ruido para encontrar el modelo perfecto para tu hogar.</p>
-  </div>
-</section>
-
-<section style="padding:0 0 3rem">
-  <div class="container">
-    <div class="filters-bar">
+    # Filters
+    if cat_key == "deshumidificadores":
+        filters_html = f'''<div class="filters-bar">
       <div class="filter-group">
         <label for="filter-sort">Ordenar:</label>
         <select id="filter-sort" class="filter-select">
@@ -427,16 +539,75 @@ def build_category(products):
           <option value="45">Hasta 45 dB</option>
         </select>
       </div>
-      <span class="results-count">{len(dh)} productos</span>
-    </div>
+      <span class="results-count">{len(cat_products)} productos</span>
+    </div>'''
+    else:
+        subcat_options = '<option value="">Todos</option>\n'
+        for sc_key, sc_label in cfg.get("subcategories", []):
+            subcat_options += f'          <option value="{sc_key}">{esc(sc_label)}</option>\n'
+        filters_html = f'''<div class="filters-bar">
+      <div class="filter-group">
+        <label for="filter-sort">Ordenar:</label>
+        <select id="filter-sort" class="filter-select">
+          <option value="relevancia">Relevancia</option>
+          <option value="precio-asc">Precio: menor a mayor</option>
+          <option value="precio-desc">Precio: mayor a menor</option>
+          <option value="potencia">Mayor potencia</option>
+          <option value="valoracion">Mejor valorado</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-price">Precio máx:</label>
+        <select id="filter-price" class="filter-select">
+          <option value="0">Todos</option>
+          <option value="50">Hasta 50 €</option>
+          <option value="80">Hasta 80 €</option>
+          <option value="100">Hasta 100 €</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-potencia">Potencia mín:</label>
+        <select id="filter-potencia" class="filter-select">
+          <option value="0">Todas</option>
+          <option value="1500">1500+ W</option>
+          <option value="2000">2000+ W</option>
+          <option value="2400">2400+ W</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-tipo">Tipo:</label>
+        <select id="filter-tipo" class="filter-select">
+          {subcat_options}
+        </select>
+      </div>
+      <span class="results-count">{len(cat_products)} productos</span>
+    </div>'''
 
-    <div class="product-grid" data-category-grid>
+    content = f'''{head_html(cfg["title"], cfg["meta_desc"], depth=1)}
+{nav_html(cfg["nav_key"], depth=1)}
+<main id="main">
+<section class="page-header">
+  <div class="container">
+    <nav class="breadcrumb">
+      <a href="../index.html">Inicio</a> <span class="breadcrumb-sep">/</span>
+      <span>{esc(cfg["title"])}</span>
+    </nav>
+    <h1>{esc(cfg["title"])}</h1>
+    <p style="color:var(--text-muted);max-width:600px">{esc(cfg["category_desc"])}</p>
+  </div>
+</section>
+
+<section style="padding:0 0 3rem">
+  <div class="container">
+    {filters_html}
+
+    <div class="product-grid" data-category-grid data-category="{cat_key}">
       {cards}
     </div>
 
     <div style="text-align:center;margin-top:2rem">
       <a href="../comparador.html" class="btn btn-primary">Comparar productos</a>
-      <a href="../guia-deshumidificadores.html" class="btn btn-outline" style="margin-left:.5rem">Guía de compra</a>
+      <a href="../{cfg["guide_slug"]}.html" class="btn btn-outline" style="margin-left:.5rem">Guía de compra</a>
     </div>
   </div>
 </section>
@@ -444,13 +615,17 @@ def build_category(products):
 {footer_html(depth=1)}
 {scripts_html(depth=1)}'''
 
-    outpath = os.path.join(BASE, "deshumidificadores", "index.html")
+    outdir = os.path.join(BASE, cfg["slug"])
+    os.makedirs(outdir, exist_ok=True)
+    outpath = os.path.join(outdir, "index.html")
     with open(outpath, "w", encoding="utf-8") as f:
         f.write(content)
-    print(f"  ✅ Categoría: deshumidificadores/index.html")
+    print(f"  ✅ Categoría: {cfg['slug']}/index.html")
+
+# ── Comparador ──────────────────────────────────────────────
 
 def build_comparador():
-    content = f'''{head_html("Comparador de deshumidificadores", "Compara hasta 3 deshumidificadores lado a lado: especificaciones, puntuaciones y precios.")}
+    content = f'''{head_html("Comparador de productos", "Compara hasta 3 productos lado a lado: especificaciones, puntuaciones y precios.")}
 {nav_html("comparador")}
 <main id="main">
 <section class="comparador" data-comparador>
@@ -479,7 +654,9 @@ def build_comparador():
         f.write(content)
     print(f"  ✅ comparador.html")
 
-def build_guide():
+# ── Guide: deshumidificadores ──────────────────────────────
+
+def build_guide_deshumidificadores():
     content = f'''{head_html("Cómo elegir el mejor deshumidificador para tu hogar", "Guía completa para elegir deshumidificador: capacidad, ruido, funciones, precio y más. Todo lo que necesitas saber antes de comprar.")}
 {nav_html("")}
 <main id="main">
@@ -490,7 +667,7 @@ def build_guide():
       <span>Guía de compra</span>
     </nav>
     <h1>Cómo elegir el mejor deshumidificador para tu hogar</h1>
-    <p style="color:var(--text-muted);margin-bottom:2rem">Actualizado: agosto 2026 · Lectura: 8 minutos</p>
+    <p style="color:var(--text-muted);margin-bottom:2rem">Actualizado: septiembre 2026 · Lectura: 8 minutos</p>
 
     <div class="guide-toc">
       <h3>En esta guía</h3>
@@ -507,62 +684,44 @@ def build_guide():
     <h2 id="por-que">¿Por qué necesitas un deshumidificador?</h2>
     <p>La humedad excesiva en el hogar no es solo una cuestión de confort. Cuando la humedad relativa supera el 60% de forma constante, aparecen problemas reales: moho en paredes y techos, condensación en ventanas, olores persistentes e incluso problemas respiratorios, especialmente en personas con alergias o asma.</p>
     <p>En España, las zonas costeras y las viviendas con mala ventilación son las más afectadas. Si ves gotas de agua en las ventanas por las mañanas, manchas oscuras en las esquinas o notas un olor a humedad al entrar en casa, un deshumidificador puede resolver el problema de raíz.</p>
-    <p>El nivel ideal de humedad interior está entre el 40% y el 55%. Un buen deshumidificador te permite mantener ese rango automáticamente.</p>
 
     <h2 id="capacidad">Capacidad de extracción: cuántos litros necesitas</h2>
-    <p>La capacidad se mide en litros por día (L/día) y es el dato más importante. Pero cuidado: los fabricantes miden a 30°C y 80% de humedad relativa — condiciones que rara vez se dan en un hogar español medio. En la práctica, espera un rendimiento un 30-40% menor que el anunciado.</p>
+    <p>La capacidad se mide en litros por día (L/día) y es el dato más importante. Pero cuidado: los fabricantes miden a 30°C y 80% de humedad relativa — condiciones que rara vez se dan en un hogar español medio.</p>
     <ul>
       <li><strong>Hasta 10 L/día:</strong> baños, vestidores, habitaciones pequeñas (hasta 15 m²)</li>
       <li><strong>12-16 L/día:</strong> dormitorios, despachos, cocinas (15-30 m²)</li>
       <li><strong>20+ L/día:</strong> salones, sótanos, pisos completos (30-50 m²)</li>
-      <li><strong>30+ L/día:</strong> grandes estancias, locales comerciales, garajes (50+ m²)</li>
     </ul>
-    <p><strong>Consejo:</strong> es mejor pasarse un poco que quedarse corto. Un deshumidificador con más capacidad de la necesaria simplemente trabajará menos tiempo y consumirá menos, no más.</p>
-
-    <div class="guide-product-insert">
-      <img src="assets/img/dh-001-1.webp" alt="Pro Breeze OmniDry 20L" loading="lazy" width="80" height="80" style="width:80px;height:80px;border-radius:8px;flex:none;object-fit:contain">
-      <div>
-        <h4>Nuestra recomendación para 20 L/día</h4>
-        <p>El Pro Breeze OmniDry 20L ofrece la mejor relación calidad-precio con Wi-Fi y 4L de depósito.</p>
-        <a href="deshumidificadores/pro-breeze-omnidry-20l.html" class="btn btn-primary btn-sm">Ver ficha completa</a>
-      </div>
-    </div>
 
     <h2 id="ruido">Nivel de ruido: dB que importan</h2>
-    <p>El ruido es el factor que más gente subestima al comprar. Un deshumidificador puede funcionar durante horas, y si suena demasiado, acabarás apagándolo — lo que anula su utilidad.</p>
+    <p>El ruido es el factor que más gente subestima al comprar. Un deshumidificador puede funcionar durante horas, y si suena demasiado, acabarás apagándolo.</p>
     <ul>
       <li><strong>Menos de 40 dB:</strong> silencioso, apto para dormitorios</li>
       <li><strong>40-45 dB:</strong> moderado, equivale a una conversación en voz baja</li>
       <li><strong>Más de 45 dB:</strong> perceptible, mejor para estancias donde no duermes</li>
     </ul>
-    <p>Si el silencio es tu prioridad absoluta, busca modelos con "modo nocturno" o "modo silencioso" que reduzcan activamente el compresor.</p>
 
     <h2 id="funciones">Funciones que marcan la diferencia</h2>
-    <p>Más allá de la capacidad y el ruido, estas funciones pueden hacer tu día a día mucho más cómodo:</p>
     <ul>
       <li><strong>Higrostato automático:</strong> mide la humedad y se enciende/apaga solo. Imprescindible.</li>
       <li><strong>Temporizador:</strong> programar encendido/apagado ahorra electricidad.</li>
-      <li><strong>Modo secado de ropa:</strong> ventilador a máxima potencia dirigido. Muy útil en invierno.</li>
-      <li><strong>Desagüe continuo:</strong> manguera que conectas al desagüe más cercano. Olvídate de vaciar el depósito.</li>
-      <li><strong>Control por app/Wi-Fi:</strong> cómodo pero no esencial. Útil si lo dejas encendido al salir de casa.</li>
-      <li><strong>Filtro lavable:</strong> ahorra en recambios a largo plazo.</li>
+      <li><strong>Modo secado de ropa:</strong> ventilador a máxima potencia. Muy útil en invierno.</li>
+      <li><strong>Desagüe continuo:</strong> olvídate de vaciar el depósito.</li>
+      <li><strong>Control por app/Wi-Fi:</strong> cómodo si lo dejas encendido al salir de casa.</li>
     </ul>
 
     <h2 id="precio">¿Cuánto debería costar?</h2>
-    <p>Los precios en Amazon España para deshumidificadores de calidad razonable van de los 130 € a los 400 €:</p>
     <ul>
-      <li><strong>130-180 €:</strong> modelos básicos de 10-12 L/día. Funcionales pero limitados.</li>
+      <li><strong>130-180 €:</strong> modelos básicos de 10-12 L/día.</li>
       <li><strong>180-250 €:</strong> el <em>sweet spot</em>. Modelos de 20 L/día con buenas funciones.</li>
       <li><strong>250-400 €:</strong> gama alta. Más silenciosos, mejor cobertura, marcas premium.</li>
     </ul>
-    <p>Nuestra experiencia: los modelos entre 180 € y 260 € ofrecen el mejor equilibrio. Por debajo, sacrificas capacidad o fiabilidad; por encima, pagas prima de marca.</p>
 
     <h2 id="recomendaciones">Nuestras recomendaciones</h2>
-    <p>Después de analizar decenas de modelos, estos son los tres que recomendamos según diferentes perfiles:</p>
     <ul>
-      <li><strong>Mejor relación calidad-precio:</strong> <a href="deshumidificadores/pro-breeze-20l.html" style="color:var(--accent)">Pro Breeze 20L</a> — 189,99 €</li>
-      <li><strong>Más eficiente y con Wi-Fi:</strong> <a href="deshumidificadores/inventor-eva-ii-pro.html" style="color:var(--accent)">Inventor EVA II Pro</a> — 249,99 €</li>
-      <li><strong>Más silencioso:</strong> <a href="deshumidificadores/delonghi-dex216f.html" style="color:var(--accent)">De'Longhi DEX216F</a> — 269,99 €</li>
+      <li><strong>Mejor relación calidad-precio:</strong> <a href="deshumidificadores/pro-breeze-omnidry-20l.html" style="color:var(--accent)">Pro Breeze OmniDry 20L</a> — 199,99 €</li>
+      <li><strong>Más económico:</strong> <a href="deshumidificadores/pro-breeze-compacto-12l.html" style="color:var(--accent)">Pro Breeze Compacto 12L</a> — 132,99 €</li>
+      <li><strong>Marca premium:</strong> <a href="deshumidificadores/delonghi-ariadry-dexd216rf.html" style="color:var(--accent)">De'Longhi AriaDry DEXD216RF</a> — 233,00 €</li>
     </ul>
 
     <div style="text-align:center;margin:2.5rem 0">
@@ -579,69 +738,179 @@ def build_guide():
         f.write(content)
     print(f"  ✅ guia-deshumidificadores.html")
 
+# ── Guide: calefactores ────────────────────────────────────
+
+def build_guide_calefactores():
+    content = f'''{head_html("Cómo elegir el mejor calefactor para tu hogar", "Guía completa para elegir calefactor: cerámicos, radiadores de aceite, paneles y estufas de cuarzo. Todo lo que necesitas saber antes de comprar.")}
+{nav_html("")}
+<main id="main">
+<section class="guide">
+  <div class="container guide-content">
+    <nav class="breadcrumb">
+      <a href="index.html">Inicio</a> <span class="breadcrumb-sep">/</span>
+      <span>Guía de calefactores</span>
+    </nav>
+    <h1>Cómo elegir el mejor calefactor para tu hogar</h1>
+    <p style="color:var(--text-muted);margin-bottom:2rem">Actualizado: septiembre 2026 · Lectura: 10 minutos</p>
+
+    <div class="guide-toc">
+      <h3>En esta guía</h3>
+      <ol>
+        <li><a href="#tipos">Tipos de calefactores: cuál es el tuyo</a></li>
+        <li><a href="#potencia">Potencia: cuántos vatios necesitas</a></li>
+        <li><a href="#silencio">Ruido: cerámicos vs. radiadores de aceite</a></li>
+        <li><a href="#seguridad">Seguridad: lo que debes exigir</a></li>
+        <li><a href="#consumo">Consumo eléctrico: la cuenta que nadie hace</a></li>
+        <li><a href="#funciones">Funciones que merecen la pena</a></li>
+        <li><a href="#recomendaciones">Nuestras recomendaciones por tipo</a></li>
+      </ol>
+    </div>
+
+    <h2 id="tipos">Tipos de calefactores: cuál es el tuyo</h2>
+    <p>No todos los calefactores funcionan igual ni sirven para lo mismo. Elegir el tipo correcto es la decisión más importante:</p>
+
+    <h3>🔥 Calefactores cerámicos</h3>
+    <p>Calientan mediante una resistencia cerámica y un ventilador que distribuye el aire caliente. Son compactos, ligeros y calientan rápido, pero hacen algo de ruido por el ventilador. Ideales para calentar habitaciones pequeñas-medianas en minutos.</p>
+    <p><strong>Mejor para:</strong> baños (con IP21), despachos, dormitorios, calor rápido.</p>
+
+    <h3>🛢️ Radiadores de aceite</h3>
+    <p>Calientan aceite térmico interno que irradia calor de forma constante y silenciosa. Tardan más en alcanzar temperatura pero mantienen el calor incluso después de apagados. Completamente silenciosos.</p>
+    <p><strong>Mejor para:</strong> dormitorios, despachos, uso prolongado, quien no soporta el ruido.</p>
+
+    <h3>📐 Paneles y convectores</h3>
+    <p>Calientan el aire por convección natural (o forzada con turbo). Diseño slim que permite montaje en pared. Modernos, algunos con panel de cristal decorativo.</p>
+    <p><strong>Mejor para:</strong> salones, pasillos, montaje en pared, quien valora el diseño.</p>
+
+    <h3>☀️ Estufas halógenas / de cuarzo</h3>
+    <p>Producen calor radiante instantáneo mediante barras de cuarzo o halógenas. No calientan el aire sino los objetos y personas que tienen delante. Muy baratas pero solo para calor puntual.</p>
+    <p><strong>Mejor para:</strong> calor inmediato, bajo el escritorio, complemento a la calefacción central.</p>
+
+    <h2 id="potencia">Potencia: cuántos vatios necesitas</h2>
+    <p>La regla general es <strong>100 W por m²</strong> en una vivienda con aislamiento normal. En la práctica:</p>
+    <ul>
+      <li><strong>Hasta 1000 W:</strong> baños pequeños, uso puntual (5-10 m²)</li>
+      <li><strong>1000-1500 W:</strong> dormitorios, despachos (10-15 m²)</li>
+      <li><strong>1500-2000 W:</strong> salones pequeños, habitaciones amplias (15-20 m²)</li>
+      <li><strong>2000-2500 W:</strong> salones grandes, estancias diáfanas (20-25 m²)</li>
+    </ul>
+    <p><strong>Importante:</strong> un calefactor eléctrico de 2000 W encendido 8 horas consume unos 16 kWh, que a tarifa media española (~0,15 €/kWh) supone <strong>~2,40 € al día</strong>. Usar el termostato y elegir el nivel de potencia adecuado reduce mucho el consumo real.</p>
+
+    <h2 id="silencio">Ruido: cerámicos vs. radiadores de aceite</h2>
+    <p>Si el silencio es prioridad, la elección es clara: los <strong>radiadores de aceite son completamente silenciosos</strong> (0 dB). No tienen ventilador ni partes móviles.</p>
+    <p>Los calefactores cerámicos y convectores con turbo generan ruido por el ventilador, típicamente entre 40-55 dB. Para dormitorios donde duermes, un radiador de aceite es siempre mejor opción.</p>
+
+    <h2 id="seguridad">Seguridad: lo que debes exigir</h2>
+    <ul>
+      <li><strong>Protección antivuelco:</strong> se apaga si se cae. Imprescindible si hay niños o mascotas.</li>
+      <li><strong>Protección contra sobrecalentamiento:</strong> se apaga si alcanza temperatura peligrosa. Todos los modelos buenos la incluyen.</li>
+      <li><strong>IP21 o superior:</strong> obligatorio si vas a usarlo en el baño. Sin esta certificación, usar un calefactor en el baño es peligroso.</li>
+      <li><strong>Temporizador:</strong> no es seguridad directa, pero evita dejarlo encendido por olvido.</li>
+    </ul>
+
+    <h2 id="consumo">Consumo eléctrico: la cuenta que nadie hace</h2>
+    <p>Todos los calefactores eléctricos convierten electricidad en calor con eficiencia del ~100%. La diferencia está en <strong>cómo y cuánto tiempo</strong> necesitan funcionar:</p>
+    <ul>
+      <li><strong>Cerámicos:</strong> calientan rápido pero consumen a máxima potencia. Buenos para uso corto e intenso.</li>
+      <li><strong>Radiadores de aceite:</strong> tardan más pero mantienen el calor residual. Mejores para uso prolongado.</li>
+      <li><strong>Estufas de cuarzo:</strong> calor instantáneo pero solo direccional. Consumen poco si solo quieres calentar a una persona.</li>
+    </ul>
+    <p><strong>Consejo:</strong> usa siempre el termostato y el nivel de potencia mínimo que necesites. Un calefactor de 2500 W usado a 1000 W consume menos de la mitad.</p>
+
+    <h2 id="funciones">Funciones que merecen la pena</h2>
+    <ul>
+      <li><strong>Termostato:</strong> mantiene la temperatura sin que tengas que estar pendiente. Básico.</li>
+      <li><strong>Varios niveles de potencia:</strong> permiten ajustar consumo al tamaño de la habitación.</li>
+      <li><strong>Temporizador:</strong> programar apagado ahorra electricidad y añade seguridad.</li>
+      <li><strong>Oscilación:</strong> en cerámicos, distribuye el calor más uniformemente.</li>
+      <li><strong>Wi-Fi / App:</strong> útil para encenderlo antes de llegar a casa. No esencial.</li>
+      <li><strong>Anti-heladas:</strong> se enciende solo si la temperatura baja de 0 °C. Genial para segundas residencias.</li>
+    </ul>
+
+    <h2 id="recomendaciones">Nuestras recomendaciones por tipo</h2>
+
+    <h3>Cerámicos</h3>
+    <ul>
+      <li><strong>Para el baño:</strong> <a href="calefactores/rowenta-instant-comfort-aqua-so6510.html" style="color:var(--accent)">Rowenta Aqua SO6510</a> — 69,99 € (IP21)</li>
+      <li><strong>Más smart:</strong> <a href="calefactores/cecotec-ready-warm-10100-smart-ceramic.html" style="color:var(--accent)">Cecotec Ready Warm 10100</a> — 59,99 € (Wi-Fi)</li>
+      <li><strong>Mejor precio:</strong> <a href="calefactores/pro-breeze-mini-ceramico-2000w.html" style="color:var(--accent)">Pro Breeze Mini 2000W</a> — 44,99 €</li>
+    </ul>
+
+    <h3>Radiadores de aceite</h3>
+    <ul>
+      <li><strong>Premium silencioso:</strong> <a href="calefactores/delonghi-trrs-1225-radia-s.html" style="color:var(--accent)">De'Longhi TRRS 1225 Radia S</a> — 139,99 €</li>
+      <li><strong>Más económico:</strong> <a href="calefactores/orbegozo-rre-1310.html" style="color:var(--accent)">Orbegozo RRE 1310</a> — 54,99 €</li>
+    </ul>
+
+    <h3>Paneles</h3>
+    <ul>
+      <li><strong>Con turbo:</strong> <a href="calefactores/rowenta-vectissimo-ii-co3030.html" style="color:var(--accent)">Rowenta Vectissimo II CO3030</a> — 69,99 €</li>
+      <li><strong>Diseño premium:</strong> <a href="calefactores/cecotec-ready-warm-6650-crystal-connection.html" style="color:var(--accent)">Cecotec Crystal Connection</a> — 89,99 €</li>
+    </ul>
+
+    <h3>Cuarzo</h3>
+    <ul>
+      <li><strong>La más barata:</strong> <a href="calefactores/orbegozo-bp-5003.html" style="color:var(--accent)">Orbegozo BP 5003</a> — 24,99 €</li>
+    </ul>
+
+    <div style="text-align:center;margin:2.5rem 0">
+      <a href="calefactores/index.html" class="btn btn-primary btn-lg">Ver todos los calefactores</a>
+      <a href="comparador.html" class="btn btn-outline btn-lg" style="margin-left:.5rem">Comparar modelos</a>
+    </div>
+  </div>
+</section>
+</main>
+{footer_html()}
+{scripts_html()}'''
+
+    outpath = os.path.join(BASE, "guia-calefactores.html")
+    with open(outpath, "w", encoding="utf-8") as f:
+        f.write(content)
+    print(f"  ✅ guia-calefactores.html")
+
+# ── Legal pages ─────────────────────────────────────────────
+
 def build_legal_pages():
     pages = {
         "aviso-afiliados.html": ("Aviso de afiliación", '''
     <h1>Aviso de afiliación</h1>
     <p>elclimadecasa.com participa en el <strong>Programa de Afiliados de Amazon EU</strong>, un programa de publicidad para afiliados diseñado para ofrecer a sitios web un modo de obtener comisiones por publicidad, publicitando e incluyendo enlaces a Amazon.es.</p>
-
     <h2>¿Qué significa esto para ti?</h2>
-    <p>Cuando haces clic en uno de nuestros enlaces a Amazon y realizas una compra, nosotros recibimos una pequeña comisión. <strong>Esto no tiene ningún coste adicional para ti</strong> — el precio que pagas es exactamente el mismo que si hubieras llegado a Amazon directamente.</p>
-
+    <p>Cuando haces clic en uno de nuestros enlaces a Amazon y realizas una compra, nosotros recibimos una pequeña comisión. <strong>Esto no tiene ningún coste adicional para ti</strong>.</p>
     <h2>¿Afecta esto a nuestras recomendaciones?</h2>
-    <p>No. Nuestras recomendaciones se basan únicamente en el análisis objetivo de las especificaciones, las valoraciones de los usuarios y nuestra propia evaluación editorial. Recomendamos productos que consideramos genuinamente buenos, independientemente de la comisión.</p>
-    <p>Los ingresos de afiliación nos permiten mantener este sitio web, dedicar tiempo al análisis de productos y seguir ofreciendo contenido gratuito y de calidad.</p>
-
+    <p>No. Nuestras recomendaciones se basan únicamente en el análisis objetivo de las especificaciones, las valoraciones de los usuarios y nuestra propia evaluación editorial.</p>
     <h2>Sobre los precios</h2>
-    <p>Los precios que mostramos son <strong>orientativos</strong> y corresponden al momento en que se capturaron los datos de Amazon. Los precios pueden variar en cualquier momento. Te recomendamos consultar siempre el precio actual en Amazon antes de comprar.</p>
-
+    <p>Los precios que mostramos son <strong>orientativos</strong> y corresponden al momento en que se capturaron los datos de Amazon. Los precios pueden variar en cualquier momento.</p>
     <h2>Marca registrada</h2>
-    <p>Amazon y el logotipo de Amazon son marcas registradas de Amazon.com, Inc. o sus afiliados. elclimadecasa.com no es operado por, patrocinado por, ni afiliado de manera especial a Amazon.</p>
+    <p>Amazon y el logotipo de Amazon son marcas registradas de Amazon.com, Inc. o sus afiliados.</p>
 '''),
         "privacidad.html": ("Política de privacidad", '''
     <h1>Política de privacidad</h1>
-    <p>Última actualización: agosto 2026</p>
-
+    <p>Última actualización: septiembre 2026</p>
     <h2>Responsable del tratamiento</h2>
-    <p>El responsable del tratamiento de los datos personales recogidos en este sitio web es <strong>Jordi Escoda Sirvent</strong> (hola@jordiescodasirvent.com).</p>
-
+    <p>El responsable del tratamiento de los datos personales es <strong>Jordi Escoda Sirvent</strong> (hola@jordiescodasirvent.com).</p>
     <h2>Datos que recopilamos</h2>
-    <p>Este sitio web no recopila datos personales directamente. No tenemos formularios de registro, cuentas de usuario ni comentarios.</p>
-    <p>Sin embargo, utilizamos servicios de terceros que pueden recopilar información de navegación:</p>
-    <ul>
-      <li><strong>Google Fonts:</strong> para la tipografía del sitio. Google puede recopilar datos como tu dirección IP.</li>
-      <li><strong>Amazon:</strong> cuando haces clic en un enlace de afiliado, Amazon recopila datos según su propia política de privacidad.</li>
-    </ul>
-
+    <p>Este sitio web no recopila datos personales directamente. Utilizamos Google Analytics para analíticas de tráfico y Google Fonts para la tipografía. Cuando haces clic en un enlace de afiliado, Amazon recopila datos según su propia política de privacidad.</p>
     <h2>Cookies</h2>
-    <p>Este sitio web no utiliza cookies propias. Los servicios de terceros mencionados anteriormente pueden establecer sus propias cookies según sus respectivas políticas.</p>
-
+    <p>Este sitio web utiliza cookies de Google Analytics para analíticas de tráfico. Los servicios de terceros pueden establecer sus propias cookies según sus respectivas políticas.</p>
     <h2>Tus derechos</h2>
-    <p>Tienes derecho a acceder, rectificar, suprimir, limitar y oponerte al tratamiento de tus datos personales conforme al RGPD. Para ejercer estos derechos, contacta con nosotros a través de los datos facilitados en el aviso legal.</p>
+    <p>Tienes derecho a acceder, rectificar, suprimir, limitar y oponerte al tratamiento de tus datos personales conforme al RGPD.</p>
 '''),
         "aviso-legal.html": ("Aviso legal", '''
     <h1>Aviso legal</h1>
-    <p>Última actualización: agosto 2026</p>
-
+    <p>Última actualización: septiembre 2026</p>
     <h2>Información general</h2>
-    <p>En cumplimiento de la Ley 34/2002, de 11 de julio, de Servicios de la Sociedad de la Información y Comercio Electrónico (LSSI-CE), se informa que este sitio web es propiedad de <strong>Jordi Escoda Sirvent</strong>.</p>
+    <p>En cumplimiento de la Ley 34/2002, de 11 de julio, de Servicios de la Sociedad de la Información y Comercio Electrónico (LSSI-CE):</p>
     <ul>
       <li><strong>Titular:</strong> Jordi Escoda Sirvent</li>
       <li><strong>Sitio web:</strong> elclimadecasa.com</li>
       <li><strong>Correo de contacto:</strong> hola@jordiescodasirvent.com</li>
     </ul>
-
     <h2>Objeto del sitio web</h2>
     <p>elclimadecasa.com es un sitio web de información y comparativas de productos de climatización del hogar. El sitio contiene enlaces de afiliado a Amazon.es (ver <a href="aviso-afiliados.html" style="color:var(--accent)">aviso de afiliación</a>).</p>
-
     <h2>Propiedad intelectual</h2>
-    <p>El contenido editorial de este sitio web (textos, análisis, comparativas, diseño) es propiedad de su titular. Los nombres de producto, marcas y logotipos pertenecen a sus respectivos propietarios.</p>
-
+    <p>El contenido editorial de este sitio web es propiedad de su titular. Los nombres de producto, marcas y logotipos pertenecen a sus respectivos propietarios.</p>
     <h2>Limitación de responsabilidad</h2>
-    <p>La información publicada en este sitio web tiene carácter informativo y orientativo. No nos hacemos responsables de posibles inexactitudes en las especificaciones técnicas de los productos, que pueden ser modificadas por los fabricantes sin previo aviso. Los precios mostrados son orientativos y pueden variar.</p>
-
-    <h2>Legislación aplicable</h2>
-    <p>Este aviso legal se rige por la legislación española. Para cualquier controversia se someterán a los juzgados y tribunales del domicilio del titular.</p>
+    <p>La información publicada tiene carácter informativo y orientativo. Los precios y especificaciones son orientativos y pueden variar.</p>
 '''),
     }
 
@@ -663,15 +932,17 @@ def build_legal_pages():
             f.write(content)
         print(f"  ✅ {filename}")
 
+# ── DB.js ───────────────────────────────────────────────────
+
 def rebuild_db_js(products):
     import json as j
     db_data = {
         "productos": products,
-        "nichos": ["deshumidificadores"],
+        "nichos": ["deshumidificadores", "calefactores"],
         "categorias": [
             {"id": "deshumidificadores", "nombre": "Deshumidificadores", "slug": "deshumidificadores", "activa": True},
+            {"id": "calefactores", "nombre": "Calefactores", "slug": "calefactores", "activa": True},
             {"id": "aires-acondicionados", "nombre": "Aires Acondicionados", "slug": "aires-acondicionados", "activa": False},
-            {"id": "calefactores", "nombre": "Calefactores", "slug": "calefactores", "activa": False},
             {"id": "ventiladores", "nombre": "Ventiladores", "slug": "ventiladores", "activa": False},
             {"id": "purificadores", "nombre": "Purificadores de Aire", "slug": "purificadores", "activa": False},
         ],
@@ -683,6 +954,10 @@ def rebuild_db_js(products):
             "capacidad": "Capacidad",
             "calidad_precio": "Calidad/Precio"
         },
+        "compareSpecs": {
+            "deshumidificadores": COMPARE_SPECS_DH,
+            "calefactores": COMPARE_SPECS_CAL,
+        },
         "updated": datetime.now().strftime("%Y-%m-%d")
     }
     js = '(function(){"use strict";window.__DB__=' + j.dumps(db_data, ensure_ascii=False) + ';})();'
@@ -690,6 +965,8 @@ def rebuild_db_js(products):
     with open(outpath, "w", encoding="utf-8") as f:
         f.write(js)
     print(f"  ✅ lib/db.js (actualizado)")
+
+# ── Main ────────────────────────────────────────────────────
 
 def main():
     print("🏗️  Generando sitio elclimadecasa.com...")
@@ -701,12 +978,18 @@ def main():
     for p in products:
         build_ficha(p, products)
 
-    build_category(products)
+    for cat_key in CATEGORY_CONFIG:
+        build_category(products, cat_key)
+
     build_comparador()
-    build_guide()
+    build_guide_deshumidificadores()
+    build_guide_calefactores()
     build_legal_pages()
 
-    print(f"\n✅ Build completo. {len(products)} fichas + categoría + comparador + guía + 3 páginas legales")
+    dh_count = len([p for p in products if p["category"] == "deshumidificadores"])
+    cal_count = len([p for p in products if p["category"] == "calefactores"])
+    print(f"\n✅ Build completo. {dh_count} deshumidificadores + {cal_count} calefactores")
+    print(f"   {dh_count + cal_count} fichas + 2 categorías + comparador + 2 guías + 3 legales")
     print(f"   Cache-buster: ?v={VER}")
 
 if __name__ == "__main__":
