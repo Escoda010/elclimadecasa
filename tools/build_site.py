@@ -27,7 +27,7 @@ def product_img(p, idx=0, cls="", depth=0):
     prefix = "../" * depth
     imgs = p.get("images", [])
     if imgs and idx < len(imgs):
-        src = prefix + imgs[idx]
+        src = imgs[idx] if imgs[idx].startswith("http") else prefix + imgs[idx]
         alt = esc(p["name"])
         c = f' class="{cls}"' if cls else ""
         return f'<img src="{src}" alt="{alt}" loading="lazy" width="400" height="400"{c}>'
@@ -47,12 +47,12 @@ SLUG_MAP = {
     "dh-001": "pro-breeze-omnidry-20l",
     "dh-002": "pro-breeze-compacto-12l",
     "dh-003": "delonghi-ariadry-dexd216rf",
-    "cal-001": "rowenta-instant-comfort-aqua-so6510",
+    "cal-001": "jata-tc73-calefactor-ceramico-1200w",
     "cal-002": "cecotec-ready-warm-10100-smart-ceramic",
     "cal-003": "pro-breeze-mini-ceramico-2000w",
-    "cal-004": "delonghi-trrs-1225-radia-s",
+    "cal-004": "delonghi-trrs-0920-radia-s",
     "cal-005": "orbegozo-rre-1310",
-    "cal-006": "cecotec-ready-warm-5750-space-360",
+    "cal-006": "orbegozo-rf-2000-radiador-aceite",
     "cal-007": "rowenta-vectissimo-ii-co3030",
     "cal-008": "cecotec-ready-warm-6650-crystal-connection",
     "cal-009": "orbegozo-bp-5003",
@@ -830,26 +830,27 @@ def build_guide_calefactores():
 
     <h3>Cerámicos</h3>
     <ul>
-      <li><strong>Para el baño:</strong> <a href="calefactores/rowenta-instant-comfort-aqua-so6510.html" style="color:var(--accent)">Rowenta Aqua SO6510</a> — 69,99 € (IP21)</li>
-      <li><strong>Más smart:</strong> <a href="calefactores/cecotec-ready-warm-10100-smart-ceramic.html" style="color:var(--accent)">Cecotec Ready Warm 10100</a> — 59,99 € (Wi-Fi)</li>
-      <li><strong>Mejor precio:</strong> <a href="calefactores/pro-breeze-mini-ceramico-2000w.html" style="color:var(--accent)">Pro Breeze Mini 2000W</a> — 44,99 €</li>
+      <li><strong>Chollo compacto:</strong> <a href="calefactores/jata-tc73-calefactor-ceramico-1200w.html" style="color:var(--accent)">Jata TC73</a> — 31,90 € (silencioso, ventilador)</li>
+      <li><strong>Más smart:</strong> <a href="calefactores/cecotec-ready-warm-10100-smart-ceramic.html" style="color:var(--accent)">Cecotec Ready Warm 10100</a> — 49,90 € (Wi-Fi)</li>
+      <li><strong>Mejor precio:</strong> <a href="calefactores/pro-breeze-mini-ceramico-2000w.html" style="color:var(--accent)">Pro Breeze Mini 2000W</a> — 37,99 €</li>
     </ul>
 
     <h3>Radiadores de aceite</h3>
     <ul>
-      <li><strong>Premium silencioso:</strong> <a href="calefactores/delonghi-trrs-1225-radia-s.html" style="color:var(--accent)">De'Longhi TRRS 1225 Radia S</a> — 139,99 €</li>
-      <li><strong>Más económico:</strong> <a href="calefactores/orbegozo-rre-1310.html" style="color:var(--accent)">Orbegozo RRE 1310</a> — 54,99 €</li>
+      <li><strong>Premium silencioso:</strong> <a href="calefactores/delonghi-trrs-0920-radia-s.html" style="color:var(--accent)">De'Longhi TRRS 0920 Radia S</a> — 128,00 €</li>
+      <li><strong>Mejor precio:</strong> <a href="calefactores/orbegozo-rf-2000-radiador-aceite.html" style="color:var(--accent)">Orbegozo RF 2000</a> — 60,30 €</li>
     </ul>
 
-    <h3>Paneles</h3>
+    <h3>Paneles y emisores</h3>
     <ul>
-      <li><strong>Con turbo:</strong> <a href="calefactores/rowenta-vectissimo-ii-co3030.html" style="color:var(--accent)">Rowenta Vectissimo II CO3030</a> — 69,99 €</li>
-      <li><strong>Diseño premium:</strong> <a href="calefactores/cecotec-ready-warm-6650-crystal-connection.html" style="color:var(--accent)">Cecotec Crystal Connection</a> — 89,99 €</li>
+      <li><strong>Emisor de pared:</strong> <a href="calefactores/orbegozo-rre-1310.html" style="color:var(--accent)">Orbegozo RRE 1310</a> — 158,50 €</li>
+      <li><strong>Con turbo:</strong> <a href="calefactores/rowenta-vectissimo-ii-co3030.html" style="color:var(--accent)">Rowenta Vectissimo II CO3030</a> — 71,94 €</li>
+      <li><strong>Diseño premium:</strong> <a href="calefactores/cecotec-ready-warm-6650-crystal-connection.html" style="color:var(--accent)">Cecotec Crystal Connection</a> — 79,90 €</li>
     </ul>
 
     <h3>Cuarzo</h3>
     <ul>
-      <li><strong>La más barata:</strong> <a href="calefactores/orbegozo-bp-5003.html" style="color:var(--accent)">Orbegozo BP 5003</a> — 24,99 €</li>
+      <li><strong>La más barata:</strong> <a href="calefactores/orbegozo-bp-5003.html" style="color:var(--accent)">Orbegozo BP 5003</a> — 19,98 €</li>
     </ul>
 
     <div style="text-align:center;margin:2.5rem 0">
