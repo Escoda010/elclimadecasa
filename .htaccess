@@ -47,6 +47,16 @@ Options -Indexes
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
+
+  # Una sola version del dominio: sin www
+  RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+  RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L]
+
+  # /index.html -> /  (evita que la misma pagina viva en dos URLs)
+  RewriteCond %{THE_REQUEST} \s/+(([^?\s]*/)?)index\.html[\s?] [NC]
+  RewriteRule ^ /%1 [R=301,L]
+
+  # URLs limpias: /guias/humedad sirve guias/humedad.html
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteCond %{REQUEST_FILENAME}.html -f
   RewriteRule ^(.+?)/?$ $1.html [L]

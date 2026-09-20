@@ -179,6 +179,19 @@ CATEGORY_CONFIG = {
     },
 }
 
+def enlace_canonico(html):
+    """href="algo/index.html" -> href="algo/" para no enlazar a URLs que redirigen."""
+    def repl(m):
+        prefijo = m.group(1)
+        return 'href="{}"'.format(prefijo if prefijo else "./")
+    return re.sub(r'href="((?:[^"]*/)?)index\.html"', repl, html)
+
+
+def escribir(ruta, contenido):
+    with open(ruta, "w", encoding="utf-8") as f:
+        f.write(enlace_canonico(contenido))
+
+
 # ── Shared HTML builders ────────────────────────────────────
 
 SITE_URL = "https://elclimadecasa.com"
@@ -249,11 +262,11 @@ FAVICON = (
 )
 
 
-def head_html(title, desc, depth=0, canonical="", og_image="", og_type="website", full_title=None):
+def head_html(title, desc, depth=0, canonical=None, og_image="", og_type="website", full_title=None):
     prefix = "../" * depth
     page_title = full_title if full_title else "{} — El Clima de Casa".format(title)
     og = ""
-    if canonical:
+    if canonical is not None:
         og += '  <link rel="canonical" href="{}/{}">'.format(SITE_URL, canonical) + NL
         og += '  <meta property="og:url" content="{}/{}">'.format(SITE_URL, canonical) + NL
     og += '  <meta property="og:type" content="{}">'.format(og_type) + NL
@@ -458,8 +471,7 @@ def build_ficha(p, all_products):
     outdir = os.path.join(BASE, cfg["slug"])
     os.makedirs(outdir, exist_ok=True)
     outpath = os.path.join(outdir, f"{slug}.html")
-    with open(outpath, "w", encoding="utf-8") as f:
-        f.write(content)
+    escribir(outpath, content)
     print(f"  - Ficha: {cfg['slug']}/{slug}.html")
 
 # ── Category index page ────────────────────────────────────
@@ -622,8 +634,7 @@ def build_category(products, cat_key):
     outdir = os.path.join(BASE, cfg["slug"])
     os.makedirs(outdir, exist_ok=True)
     outpath = os.path.join(outdir, "index.html")
-    with open(outpath, "w", encoding="utf-8") as f:
-        f.write(content)
+    escribir(outpath, content)
     print(f"  - Categoría: {cfg['slug']}/index.html")
 
 # ── Comparador ──────────────────────────────────────────────
@@ -654,8 +665,7 @@ def build_comparador():
 {scripts_html()}'''
 
     outpath = os.path.join(BASE, "comparador.html")
-    with open(outpath, "w", encoding="utf-8") as f:
-        f.write(content)
+    escribir(outpath, content)
     print(f"  - comparador.html")
 
 # ── Guide: deshumidificadores ──────────────────────────────
@@ -738,8 +748,7 @@ def build_guide_deshumidificadores():
 {scripts_html()}'''
 
     outpath = os.path.join(BASE, "guia-deshumidificadores.html")
-    with open(outpath, "w", encoding="utf-8") as f:
-        f.write(content)
+    escribir(outpath, content)
     print(f"  - guia-deshumidificadores.html")
 
 # ── Guide: calefactores ────────────────────────────────────
@@ -868,8 +877,7 @@ def build_guide_calefactores():
 {scripts_html()}'''
 
     outpath = os.path.join(BASE, "guia-calefactores.html")
-    with open(outpath, "w", encoding="utf-8") as f:
-        f.write(content)
+    escribir(outpath, content)
     print(f"  - guia-calefactores.html")
 
 # ── Legal pages ─────────────────────────────────────────────
@@ -933,8 +941,7 @@ def build_legal_pages():
 {scripts_html()}'''
 
         outpath = os.path.join(BASE, filename)
-        with open(outpath, "w", encoding="utf-8") as f:
-            f.write(content)
+        escribir(outpath, content)
         print(f"  - {filename}")
 
 # ── DB.js ───────────────────────────────────────────────────
@@ -1107,8 +1114,7 @@ def build_guia(guia, products):
 
     outdir = os.path.join(BASE, "guias")
     os.makedirs(outdir, exist_ok=True)
-    with open(os.path.join(outdir, guia["slug"] + ".html"), "w", encoding="utf-8") as f:
-        f.write(content)
+    escribir(os.path.join(outdir, guia["slug"] + ".html"), content)
     print("  - Guía: guias/{}.html".format(guia["slug"]))
 
 
@@ -1171,8 +1177,7 @@ def build_guias_index(guias):
 
     outdir = os.path.join(BASE, "guias")
     os.makedirs(outdir, exist_ok=True)
-    with open(os.path.join(outdir, "index.html"), "w", encoding="utf-8") as f:
-        f.write(content)
+    escribir(os.path.join(outdir, "index.html"), content)
     print("  - guias/index.html")
 
 
@@ -1263,8 +1268,7 @@ def build_home(products, guias):
         scripts=scripts_html(),
     )
 
-    with open(os.path.join(BASE, "index.html"), "w", encoding="utf-8") as f:
-        f.write(content)
+    escribir(os.path.join(BASE, "index.html"), content)
     print("  - index.html")
 
 
@@ -1299,8 +1303,7 @@ def build_sobre_nosotros():
         scripts=scripts_html(),
     )
 
-    with open(os.path.join(BASE, "sobre-nosotros.html"), "w", encoding="utf-8") as f:
-        f.write(content)
+    escribir(os.path.join(BASE, "sobre-nosotros.html"), content)
     print("  - sobre-nosotros.html")
 
 
