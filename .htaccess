@@ -42,6 +42,9 @@
   AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json image/svg+xml
 </IfModule>
 
+# Sin listado de directorios (lo tenia el .htaccess anterior del servidor)
+Options -Indexes
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteCond %{REQUEST_FILENAME} !-d

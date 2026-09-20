@@ -21,3 +21,7 @@ __pycache__/
 # Backup files
 *.bak
 *.orig
+
+# Credenciales y estado de publicacion (nunca al repositorio)
+tools/deploy.config.json
+tools/.publicado.json

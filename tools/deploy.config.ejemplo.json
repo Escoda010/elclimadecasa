@@ -1,0 +1,10 @@
+{
+  "_comentario": "Copia este archivo como tools/deploy.config.json y rellena los datos. Ese archivo NO se sube a git.",
+  "_carpeta_remota": "Dejalo en blanco si la cuenta FTP esta limitada a public_html (su raiz ya es la web). Pon 'public_html' solo si la cuenta ve toda la home.",
+  "host": "server331-3.web-hosting.com",
+  "usuario": "claude@elclimadecasa.com",
+  "password": "",
+  "carpeta_remota": "",
+  "tls": true,
+  "puerto": 21
+}

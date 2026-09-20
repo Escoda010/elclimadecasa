@@ -8,7 +8,6 @@
 
   var $ = function (sel, scope) { return (scope || document).querySelector(sel); };
   var $$ = function (sel, scope) { return Array.from((scope || document).querySelectorAll(sel)); };
-  var reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   var escHTML = function (s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
       return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
@@ -49,94 +48,44 @@
 
   function imgOrPlaceholder(src, alt) {
     if (!src || src.indexOf("PLACEHOLDER") !== -1 || src === "")
-      return '<div class="img-placeholder">💧</div>';
+      return '<div class="img-placeholder">Sin imagen</div>';
     return '<img src="' + escHTML(src) + '" alt="' + escHTML(alt) + '" loading="lazy" decoding="async">';
   }
 
   /* ---- Nav ---- */
   function initNav() {
-    var nav = $(".nav");
     var toggle = $(".nav-toggle");
     var mobile = $(".nav-mobile");
-    if (!nav) return;
+    if (!toggle || !mobile) return;
 
-    window.addEventListener("scroll", function () {
-      nav.classList.toggle("scrolled", window.scrollY > 20);
-    }, { passive: true });
-
-    if (toggle && mobile) {
-      toggle.addEventListener("click", function () {
-        toggle.classList.toggle("open");
-        mobile.classList.toggle("open");
-        document.body.style.overflow = mobile.classList.contains("open") ? "hidden" : "";
-      });
-      $$("a", mobile).forEach(function (a) {
-        a.addEventListener("click", function () {
-          toggle.classList.remove("open");
-          mobile.classList.remove("open");
-          document.body.style.overflow = "";
-        });
-      });
+    function setOpen(open) {
+      mobile.classList.toggle("open", open);
+      mobile.setAttribute("aria-hidden", open ? "false" : "true");
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
     }
-  }
 
-  /* ---- Smooth scroll ---- */
-  function initSmoothScroll() {
-    document.addEventListener("click", function (e) {
-      var a = e.target.closest('a[href^="#"]');
-      if (!a) return;
-      var id = a.getAttribute("href");
-      if (!id || id === "#") return;
-      var el = document.querySelector(id);
-      if (!el) return;
-      e.preventDefault();
-      var navOffset = 80;
-      window.scrollTo({
-        top: el.getBoundingClientRect().top + scrollY - navOffset,
-        behavior: reduced ? "auto" : "smooth"
-      });
+    toggle.addEventListener("click", function () {
+      setOpen(!mobile.classList.contains("open"));
     });
-  }
 
-  /* ---- Reveals ---- */
-  function initReveals() {
-    var els = $$(".reveal");
-    if (!els.length) return;
-    if (reduced) {
-      els.forEach(function (el) { el.classList.add("is-visible"); });
-      return;
-    }
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) {
-        if (e.isIntersecting) {
-          e.target.classList.add("is-visible");
-          io.unobserve(e.target);
-        }
-      });
-    }, { threshold: 0.01, rootMargin: "0px 0px -2% 0px" });
-    els.forEach(function (el) { io.observe(el); });
-    setTimeout(function () {
-      els.forEach(function (el) {
-        if (!el.classList.contains("is-visible") &&
-            el.getBoundingClientRect().top < window.innerHeight) {
-          el.classList.add("is-visible");
-        }
-      });
-    }, 6000);
+    $$("a", mobile).forEach(function (a) {
+      a.addEventListener("click", function () { setOpen(false); });
+    });
   }
 
   /* ---- Radar chart (SVG) ---- */
   function drawRadar(container, scores, opts) {
     opts = opts || {};
     var size = opts.size || 300;
-    var cx = size / 2;
+    var viewW = Math.round(size * 1.5);
+    var cx = viewW / 2;
     var cy = size / 2;
-    var r = (size / 2) - 40;
+    var r = (size / 2) - 26;
     var axes = scoreAxes;
     var n = axes.length;
     if (!n) return;
-    var colors = opts.colors || ["rgba(37,99,235,.35)"];
-    var strokes = opts.strokeColors || ["#2563eb"];
+    var colors = opts.colors || ["rgba(27,73,101,.25)"];
+    var strokes = opts.strokeColors || ["#1b4965"];
 
     var angleStep = (2 * Math.PI) / n;
     var startAngle = -Math.PI / 2;
@@ -147,7 +96,7 @@
       return [cx + dist * Math.cos(angle), cy + dist * Math.sin(angle)];
     }
 
-    var svg = '<svg class="' + (opts.className || "radar-svg") + '" viewBox="0 0 ' + size + ' ' + size + '" xmlns="http://www.w3.org/2000/svg">';
+    var svg = '<svg class="' + (opts.className || "radar-svg") + '" viewBox="0 0 ' + viewW + ' ' + size + '" xmlns="http://www.w3.org/2000/svg">';
 
     for (var ring = 2; ring <= 10; ring += 2) {
       var pts = [];
@@ -155,12 +104,12 @@
         var p = pointOnAxis(i, ring);
         pts.push(p[0] + "," + p[1]);
       }
-      svg += '<polygon points="' + pts.join(" ") + '" fill="none" stroke="#e2e8f0" stroke-width="1"/>';
+      svg += '<polygon points="' + pts.join(" ") + '" fill="none" stroke="#e5e7eb" stroke-width="1"/>';
     }
 
     for (var i = 0; i < n; i++) {
       var p = pointOnAxis(i, 10);
-      svg += '<line x1="' + cx + '" y1="' + cy + '" x2="' + p[0] + '" y2="' + p[1] + '" stroke="#e2e8f0" stroke-width="1"/>';
+      svg += '<line x1="' + cx + '" y1="' + cy + '" x2="' + p[0] + '" y2="' + p[1] + '" stroke="#e5e7eb" stroke-width="1"/>';
     }
 
     if (!Array.isArray(scores[0])) scores = [scores];
@@ -177,12 +126,12 @@
 
     for (var i = 0; i < n; i++) {
       var angle = startAngle + i * angleStep;
-      var lx = cx + (r + 24) * Math.cos(angle);
-      var ly = cy + (r + 24) * Math.sin(angle);
+      var lx = cx + (r + 16) * Math.cos(angle);
+      var ly = cy + (r + 16) * Math.sin(angle);
       var anchor = "middle";
       if (Math.cos(angle) < -0.1) anchor = "end";
       else if (Math.cos(angle) > 0.1) anchor = "start";
-      svg += '<text x="' + lx + '" y="' + ly + '" text-anchor="' + anchor + '" dominant-baseline="central" fill="#5a6a7e" font-size="11" font-weight="500">' + escHTML(scoreLabels[axes[i]] || axes[i]) + '</text>';
+      svg += '<text x="' + lx + '" y="' + ly + '" text-anchor="' + anchor + '" dominant-baseline="central" fill="#6b7280" font-size="11" font-weight="500">' + escHTML(scoreLabels[axes[i]] || axes[i]) + '</text>';
     }
 
     svg += "</svg>";
@@ -265,9 +214,9 @@
     if (!page) return;
 
     var compareColors = [
-      { fill: "rgba(37,99,235,.3)", stroke: "#2563eb", swatch: "#2563eb" },
-      { fill: "rgba(220,38,38,.25)", stroke: "#dc2626", swatch: "#dc2626" },
-      { fill: "rgba(5,150,105,.25)", stroke: "#059669", swatch: "#059669" }
+      { fill: "rgba(27,73,101,.25)", stroke: "#1b4965", swatch: "#1b4965" },
+      { fill: "rgba(232,115,74,.25)", stroke: "#e8734a", swatch: "#e8734a" },
+      { fill: "rgba(63,125,90,.22)", stroke: "#3f7d5a", swatch: "#3f7d5a" }
     ];
 
     var selected = [];
@@ -460,8 +409,6 @@
   /* ---- Boot ---- */
   function boot() {
     safe(initNav, "initNav");
-    safe(initSmoothScroll, "initSmoothScroll");
-    safe(initReveals, "initReveals");
     safe(initFichaRadar, "initFichaRadar");
     safe(initCategoryFilters, "initCategoryFilters");
     safe(initComparador, "initComparador");

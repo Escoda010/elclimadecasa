@@ -2,8 +2,13 @@
 build_site.py — Genera las páginas HTML desde datos/productos.json
 Ejecutar: python tools/build_site.py
 """
-import json, os, sys, html as htmlmod
+import json, os, re, sys, html as htmlmod
 from datetime import datetime
+
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VER = datetime.now().strftime("%Y%m%d%H%M")
@@ -31,8 +36,7 @@ def product_img(p, idx=0, cls="", depth=0):
         alt = esc(p["name"])
         c = f' class="{cls}"' if cls else ""
         return f'<img src="{src}" alt="{alt}" loading="lazy" width="400" height="400"{c}>'
-    icon = CATEGORY_CONFIG.get(p.get("category", ""), {}).get("icon", "🌡️")
-    return f'<div class="img-placeholder">{icon}</div>'
+    return '<div class="img-placeholder">Sin imagen</div>'
 
 def stars_html(rating):
     full = int(rating)
@@ -141,7 +145,6 @@ SUBCATEGORIES_CAL = [
 CATEGORY_CONFIG = {
     "deshumidificadores": {
         "title": "Deshumidificadores",
-        "icon": "💧",
         "slug": "deshumidificadores",
         "nav_key": "deshumidificadores",
         "spec_fields": SPEC_FIELDS_DH,
@@ -159,7 +162,6 @@ CATEGORY_CONFIG = {
     },
     "calefactores": {
         "title": "Calefactores",
-        "icon": "🔥",
         "slug": "calefactores",
         "nav_key": "calefactores",
         "spec_fields": SPEC_FIELDS_CAL,
@@ -179,98 +181,98 @@ CATEGORY_CONFIG = {
 
 # ── Shared HTML builders ────────────────────────────────────
 
+SITE_URL = "https://elclimadecasa.com"
+
+TAGLINE = "Guías independientes de climatización para tu hogar."
+
+NAV_LINKS = [
+    ("index.html", "Inicio", "inicio"),
+    ("guias/index.html", "Guías", "guias"),
+    ("deshumidificadores/index.html", "Deshumidificadores", "deshumidificadores"),
+    ("calefactores/index.html", "Calefactores", "calefactores"),
+    ("comparador.html", "Comparador", "comparador"),
+    ("sobre-nosotros.html", "Sobre nosotros", "sobre-nosotros"),
+]
+
+NL = chr(10)
+
+
 def nav_html(active="", depth=0):
     prefix = "../" * depth
-    links = [
-        ("index.html", "Inicio", "inicio"),
-        ("deshumidificadores/index.html", "Deshumidificadores", "deshumidificadores"),
-        ("calefactores/index.html", "Calefactores", "calefactores"),
-        ("#", "Aires Acondicionados", "aires"),
-        ("#", "Ventiladores", "ventiladores"),
-        ("#", "Purificadores", "purificadores"),
-        ("comparador.html", "Comparador", "comparador"),
-    ]
     items = ""
     mob = ""
-    for href, label, key in links:
-        h = prefix + href if href != "#" else "#"
+    for href, label, key in NAV_LINKS:
+        h = prefix + href
         cls = ' class="active"' if key == active else ""
-        if key == "comparador":
-            cls = ' class="nav-cta"'
-        items += f'<li><a href="{h}"{cls}>{label}</a></li>\n'
-        mob += f'<a href="{h}">{label}</a>\n'
+        items += '<li><a href="{}"{}>{}</a></li>'.format(h, cls, label) + NL
+        mob += '<a href="{}">{}</a>'.format(h, label) + NL
 
-    return f'''<nav class="nav" aria-label="Navegación principal">
+    return f"""<header>
+<nav class="nav" aria-label="Navegación principal">
   <div class="nav-inner">
-    <a href="{prefix}index.html" class="nav-logo">
-      <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14" r="13" stroke="#2563eb" stroke-width="2"/><path d="M14 7v10M11 14l3 3 3-3" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="14" cy="21" r="2" fill="#2563eb"/></svg>
-      El Clima <span>de Casa</span>
-    </a>
+    <a href="{prefix}index.html" class="nav-logo">El Clima <span>de Casa</span></a>
     <ul class="nav-links">{items}</ul>
-    <button class="nav-toggle" aria-label="Abrir menú"><span></span><span></span><span></span></button>
+    <button class="nav-toggle" aria-label="Abrir menú" aria-expanded="false"><span></span><span></span><span></span></button>
   </div>
 </nav>
-<div class="nav-mobile" aria-hidden="true">{mob}</div>'''
+<div class="nav-mobile" aria-hidden="true">{mob}</div>
+<div class="site-tagline"><p>{TAGLINE}</p></div>
+</header>"""
+
 
 def footer_html(depth=0):
     prefix = "../" * depth
-    return f'''<footer class="footer">
+    return f"""<footer class="footer">
   <div class="container">
-    <div class="footer-grid">
-      <div>
-        <h4>El Clima de Casa</h4>
-        <p style="font-size:.88rem">Guías independientes de productos de climatización para tu hogar.</p>
-      </div>
-      <div>
-        <h4>Categorías</h4>
-        <ul class="footer-links">
-          <li><a href="{prefix}deshumidificadores/index.html">Deshumidificadores</a></li>
-          <li><a href="{prefix}calefactores/index.html">Calefactores</a></li>
-          <li><a href="#">Aires Acondicionados</a></li>
-          <li><a href="#">Ventiladores</a></li>
-          <li><a href="#">Purificadores</a></li>
-        </ul>
-      </div>
-      <div>
-        <h4>Recursos</h4>
-        <ul class="footer-links">
-          <li><a href="{prefix}comparador.html">Comparador</a></li>
-          <li><a href="{prefix}guia-deshumidificadores.html">Guía deshumidificadores</a></li>
-          <li><a href="{prefix}guia-calefactores.html">Guía calefactores</a></li>
-        </ul>
-      </div>
-      <div>
-        <h4>Legal</h4>
-        <ul class="footer-links">
-          <li><a href="{prefix}aviso-afiliados.html">Aviso de afiliación</a></li>
-          <li><a href="{prefix}privacidad.html">Política de privacidad</a></li>
-          <li><a href="{prefix}aviso-legal.html">Aviso legal</a></li>
-        </ul>
-      </div>
-    </div>
-    <div class="footer-bottom">
-      <div class="affiliate-notice">
-        <strong>Aviso de afiliación:</strong> elclimadecasa.com participa en el Programa de Afiliados de Amazon EU. Esto significa que cuando compras a través de nuestros enlaces, podemos recibir una pequeña comisión sin coste adicional para ti. Amazon y el logotipo de Amazon son marcas registradas de Amazon.com, Inc. o sus afiliados.
-      </div>
-      <p>&copy; 2026 El Clima de Casa. Todos los derechos reservados.</p>
-    </div>
+    <ul class="footer-nav">
+      <li><a href="{prefix}index.html">Inicio</a></li>
+      <li><a href="{prefix}guias/index.html">Guías</a></li>
+      <li><a href="{prefix}deshumidificadores/index.html">Deshumidificadores</a></li>
+      <li><a href="{prefix}calefactores/index.html">Calefactores</a></li>
+      <li><a href="{prefix}comparador.html">Comparador</a></li>
+      <li><a href="{prefix}sobre-nosotros.html">Sobre nosotros</a></li>
+      <li><a href="{prefix}aviso-afiliados.html">Aviso de afiliación</a></li>
+      <li><a href="{prefix}privacidad.html">Privacidad</a></li>
+      <li><a href="{prefix}aviso-legal.html">Aviso legal</a></li>
+    </ul>
+    <p class="affiliate-notice">elclimadecasa.com participa en el Programa de Afiliados de Amazon EU. Cuando compras a través de nuestros enlaces recibimos una pequeña comisión, sin coste adicional para ti. Amazon y el logotipo de Amazon son marcas registradas de Amazon.com, Inc. o sus afiliados.</p>
+    <div class="footer-bottom"><p>&copy; 2026 El Clima de Casa</p></div>
   </div>
-</footer>'''
+</footer>"""
 
-def head_html(title, desc, depth=0):
+
+FAVICON = (
+    "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'>"
+    "<rect width='32' height='32' rx='5' fill='%231b4965'/>"
+    "<path d='M16 7v12' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'/>"
+    "<circle cx='16' cy='23' r='3' fill='%23ffffff'/></svg>"
+)
+
+
+def head_html(title, desc, depth=0, canonical="", og_image="", og_type="website", full_title=None):
     prefix = "../" * depth
-    return f'''<!DOCTYPE html>
+    page_title = full_title if full_title else "{} — El Clima de Casa".format(title)
+    og = ""
+    if canonical:
+        og += '  <link rel="canonical" href="{}/{}">'.format(SITE_URL, canonical) + NL
+        og += '  <meta property="og:url" content="{}/{}">'.format(SITE_URL, canonical) + NL
+    og += '  <meta property="og:type" content="{}">'.format(og_type) + NL
+    og += '  <meta property="og:site_name" content="El Clima de Casa">' + NL
+    og += '  <meta property="og:title" content="{}">'.format(esc(page_title)) + NL
+    og += '  <meta property="og:description" content="{}">'.format(esc(desc)) + NL
+    if og_image:
+        img = og_image if og_image.startswith("http") else "{}/{}".format(SITE_URL, og_image)
+        og += '  <meta property="og:image" content="{}">'.format(img) + NL
+
+    return f"""<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{esc(title)} — El Clima de Casa</title>
+  <title>{esc(page_title)}</title>
   <meta name="description" content="{esc(desc)}">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="{prefix}styles.css?v={VER}">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌡️</text></svg>">
+{og}  <link rel="stylesheet" href="{prefix}styles.css?v={VER}">
+  <link rel="icon" href="{FAVICON}">
   <meta name="p:domain_verify" content="447a4061b72017eac6ae92ec67a035cb"/>
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-DP24YW5N8Z"></script>
@@ -282,14 +284,16 @@ def head_html(title, desc, depth=0):
   </script>
 </head>
 <body>
-<a href="#main" class="skip-link">Ir al contenido</a>'''
+<a href="#main" class="skip-link">Ir al contenido</a>"""
+
 
 def scripts_html(depth=0):
     prefix = "../" * depth
-    return f'''<script defer src="{prefix}lib/db.js?v={VER}"></script>
+    return f"""<script defer src="{prefix}lib/db.js?v={VER}"></script>
 <script defer src="{prefix}main.js?v={VER}"></script>
 </body>
-</html>'''
+</html>"""
+
 
 # ── Spec table ──────────────────────────────────────────────
 
@@ -375,7 +379,7 @@ def build_ficha(p, all_products):
   <div class="similar-scroll">{cards}</div>
 </section>'''
 
-    content = f'''{head_html(p["name"], p.get("description",""), depth=1)}
+    content = f'''{head_html(p["name"], p.get("description",""), depth=1, canonical=f'{cfg["slug"]}/{slug}.html', og_image=(p.get("images") or [""])[0], og_type="product")}
 {nav_html(cfg["nav_key"], depth=1)}
 <main id="main">
 <section class="ficha">
@@ -413,7 +417,7 @@ def build_ficha(p, all_products):
       </div>
     </div>
 
-    <section class="radar-section reveal">
+    <section class="radar-section">
       <h2>Valoración del editor</h2>
       <div class="radar-wrap">
         <div data-ficha-radar="{p["id"]}"></div>
@@ -421,11 +425,11 @@ def build_ficha(p, all_products):
       </div>
     </section>
 
-    <section class="spec-table-wrap reveal">
+    <section class="spec-table-wrap">
       {spec_table_html(p)}
     </section>
 
-    <section class="editorial-section reveal">
+    <section class="editorial-section">
       <h2>Nuestro análisis</h2>
       <div class="editorial-body">{p.get("cuerpo_editorial","")}</div>
     </section>
@@ -434,7 +438,7 @@ def build_ficha(p, all_products):
 
     <a href="{esc(p["affiliate_url"])}" class="btn btn-amazon btn-lg btn-block" target="_blank" rel="nofollow noopener sponsored" style="margin-bottom:2rem">Ver en Amazon</a>
 
-    <section class="reviews-section reveal">
+    <section class="reviews-section">
       <h3>Lo que dicen los compradores</h3>
       <p>{esc(p.get("resenas_resumen",""))}</p>
     </section>
@@ -456,7 +460,7 @@ def build_ficha(p, all_products):
     outpath = os.path.join(outdir, f"{slug}.html")
     with open(outpath, "w", encoding="utf-8") as f:
         f.write(content)
-    print(f"  ✅ Ficha: {cfg['slug']}/{slug}.html")
+    print(f"  - Ficha: {cfg['slug']}/{slug}.html")
 
 # ── Category index page ────────────────────────────────────
 
@@ -477,7 +481,7 @@ def build_category(products, cat_key):
         chips = cfg["chips"](p)
         chips_html = "".join(f'<span class="product-card-chip">{esc(c)}</span>' for c in chips)
 
-        cards += f'''<article class="product-card reveal" data-product-id="{p["id"]}">
+        cards += f'''<article class="product-card" data-product-id="{p["id"]}">
   <div class="product-card-img">
     {badge}
     {product_img(p, depth=1)}
@@ -583,7 +587,7 @@ def build_category(products, cat_key):
       <span class="results-count">{len(cat_products)} productos</span>
     </div>'''
 
-    content = f'''{head_html(cfg["title"], cfg["meta_desc"], depth=1)}
+    content = f'''{head_html(cfg["title"], cfg["meta_desc"], depth=1, canonical=f'{cfg["slug"]}/')}
 {nav_html(cfg["nav_key"], depth=1)}
 <main id="main">
 <section class="page-header">
@@ -620,12 +624,12 @@ def build_category(products, cat_key):
     outpath = os.path.join(outdir, "index.html")
     with open(outpath, "w", encoding="utf-8") as f:
         f.write(content)
-    print(f"  ✅ Categoría: {cfg['slug']}/index.html")
+    print(f"  - Categoría: {cfg['slug']}/index.html")
 
 # ── Comparador ──────────────────────────────────────────────
 
 def build_comparador():
-    content = f'''{head_html("Comparador de productos", "Compara hasta 3 productos lado a lado: especificaciones, puntuaciones y precios.")}
+    content = f'''{head_html("Comparador de productos", "Compara hasta 3 productos lado a lado: especificaciones, puntuaciones y precios.", canonical="comparador.html")}
 {nav_html("comparador")}
 <main id="main">
 <section class="comparador" data-comparador>
@@ -652,13 +656,13 @@ def build_comparador():
     outpath = os.path.join(BASE, "comparador.html")
     with open(outpath, "w", encoding="utf-8") as f:
         f.write(content)
-    print(f"  ✅ comparador.html")
+    print(f"  - comparador.html")
 
 # ── Guide: deshumidificadores ──────────────────────────────
 
 def build_guide_deshumidificadores():
-    content = f'''{head_html("Cómo elegir el mejor deshumidificador para tu hogar", "Guía completa para elegir deshumidificador: capacidad, ruido, funciones, precio y más. Todo lo que necesitas saber antes de comprar.")}
-{nav_html("")}
+    content = f'''{head_html("Cómo elegir el mejor deshumidificador para tu hogar", "Guía completa para elegir deshumidificador: capacidad, ruido, funciones, precio y más. Todo lo que necesitas saber antes de comprar.", canonical="guia-deshumidificadores.html", og_type="article")}
+{nav_html("guias")}
 <main id="main">
 <section class="guide">
   <div class="container guide-content">
@@ -736,13 +740,13 @@ def build_guide_deshumidificadores():
     outpath = os.path.join(BASE, "guia-deshumidificadores.html")
     with open(outpath, "w", encoding="utf-8") as f:
         f.write(content)
-    print(f"  ✅ guia-deshumidificadores.html")
+    print(f"  - guia-deshumidificadores.html")
 
 # ── Guide: calefactores ────────────────────────────────────
 
 def build_guide_calefactores():
-    content = f'''{head_html("Cómo elegir el mejor calefactor para tu hogar", "Guía completa para elegir calefactor: cerámicos, radiadores de aceite, paneles y estufas de cuarzo. Todo lo que necesitas saber antes de comprar.")}
-{nav_html("")}
+    content = f'''{head_html("Cómo elegir el mejor calefactor para tu hogar", "Guía completa para elegir calefactor: cerámicos, radiadores de aceite, paneles y estufas de cuarzo. Todo lo que necesitas saber antes de comprar.", canonical="guia-calefactores.html", og_type="article")}
+{nav_html("guias")}
 <main id="main">
 <section class="guide">
   <div class="container guide-content">
@@ -769,19 +773,19 @@ def build_guide_calefactores():
     <h2 id="tipos">Tipos de calefactores: cuál es el tuyo</h2>
     <p>No todos los calefactores funcionan igual ni sirven para lo mismo. Elegir el tipo correcto es la decisión más importante:</p>
 
-    <h3>🔥 Calefactores cerámicos</h3>
+    <h3>Calefactores cerámicos</h3>
     <p>Calientan mediante una resistencia cerámica y un ventilador que distribuye el aire caliente. Son compactos, ligeros y calientan rápido, pero hacen algo de ruido por el ventilador. Ideales para calentar habitaciones pequeñas-medianas en minutos.</p>
     <p><strong>Mejor para:</strong> baños (con IP21), despachos, dormitorios, calor rápido.</p>
 
-    <h3>🛢️ Radiadores de aceite</h3>
+    <h3>Radiadores de aceite</h3>
     <p>Calientan aceite térmico interno que irradia calor de forma constante y silenciosa. Tardan más en alcanzar temperatura pero mantienen el calor incluso después de apagados. Completamente silenciosos.</p>
     <p><strong>Mejor para:</strong> dormitorios, despachos, uso prolongado, quien no soporta el ruido.</p>
 
-    <h3>📐 Paneles y convectores</h3>
+    <h3>Paneles y convectores</h3>
     <p>Calientan el aire por convección natural (o forzada con turbo). Diseño slim que permite montaje en pared. Modernos, algunos con panel de cristal decorativo.</p>
     <p><strong>Mejor para:</strong> salones, pasillos, montaje en pared, quien valora el diseño.</p>
 
-    <h3>☀️ Estufas halógenas / de cuarzo</h3>
+    <h3>Estufas halógenas / de cuarzo</h3>
     <p>Producen calor radiante instantáneo mediante barras de cuarzo o halógenas. No calientan el aire sino los objetos y personas que tienen delante. Muy baratas pero solo para calor puntual.</p>
     <p><strong>Mejor para:</strong> calor inmediato, bajo el escritorio, complemento a la calefacción central.</p>
 
@@ -866,7 +870,7 @@ def build_guide_calefactores():
     outpath = os.path.join(BASE, "guia-calefactores.html")
     with open(outpath, "w", encoding="utf-8") as f:
         f.write(content)
-    print(f"  ✅ guia-calefactores.html")
+    print(f"  - guia-calefactores.html")
 
 # ── Legal pages ─────────────────────────────────────────────
 
@@ -890,7 +894,7 @@ def build_legal_pages():
     <h2>Responsable del tratamiento</h2>
     <p>El responsable del tratamiento de los datos personales es <strong>Jordi Escoda Sirvent</strong> (hola@jordiescodasirvent.com).</p>
     <h2>Datos que recopilamos</h2>
-    <p>Este sitio web no recopila datos personales directamente. Utilizamos Google Analytics para analíticas de tráfico y Google Fonts para la tipografía. Cuando haces clic en un enlace de afiliado, Amazon recopila datos según su propia política de privacidad.</p>
+    <p>Este sitio web no recopila datos personales directamente. Utilizamos Google Analytics para analíticas de tráfico. Cuando haces clic en un enlace de afiliado, Amazon recopila datos según su propia política de privacidad.</p>
     <h2>Cookies</h2>
     <p>Este sitio web utiliza cookies de Google Analytics para analíticas de tráfico. Los servicios de terceros pueden establecer sus propias cookies según sus respectivas políticas.</p>
     <h2>Tus derechos</h2>
@@ -916,7 +920,7 @@ def build_legal_pages():
     }
 
     for filename, (title, body) in pages.items():
-        content = f'''{head_html(title, f"{title} de elclimadecasa.com")}
+        content = f'''{head_html(title, f"{title} de elclimadecasa.com", canonical=filename)}
 {nav_html("")}
 <main id="main">
 <section class="legal">
@@ -931,7 +935,7 @@ def build_legal_pages():
         outpath = os.path.join(BASE, filename)
         with open(outpath, "w", encoding="utf-8") as f:
             f.write(content)
-        print(f"  ✅ {filename}")
+        print(f"  - {filename}")
 
 # ── DB.js ───────────────────────────────────────────────────
 
@@ -965,14 +969,388 @@ def rebuild_db_js(products):
     outpath = os.path.join(BASE, "lib", "db.js")
     with open(outpath, "w", encoding="utf-8") as f:
         f.write(js)
-    print(f"  ✅ lib/db.js (actualizado)")
+    print(f"  - lib/db.js (actualizado)")
+
+
+# ── Guías editoriales ─────────────────────────────
+
+HOME_FEATURED = ["dh-001", "cal-003", "cal-004", "dh-002"]
+
+CATEGORY_ORDER = ["deshumidificadores", "calefactores"]
+
+PROXIMAMENTE = ["Aires acondicionados", "Ventiladores", "Purificadores"]
+
+
+def load_guias():
+    path = os.path.join(BASE, "datos", "guias.json")
+    if not os.path.exists(path):
+        return []
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def product_by_id(products, pid):
+    for p in products:
+        if p["id"] == pid:
+            return p
+    return None
+
+
+def product_href(p, depth=1):
+    """Ruta a la ficha del producto desde una página a profundidad `depth`."""
+    prefix = "../" * depth
+    cat = CATEGORY_CONFIG.get(p.get("category", ""), {}).get("slug", p.get("category", ""))
+    return "{}{}/{}.html".format(prefix, cat, product_slug(p))
+
+
+def expand_tokens(body, products, depth=1):
+    """Sustituye [[ficha:id|texto]], [[enlace:id|texto]] y [[figura:id|pie]]."""
+
+    def repl(m):
+        kind, pid, text = m.group(1), m.group(2), (m.group(3) or "").strip()
+        p = product_by_id(products, pid)
+        if not p:
+            return text or ""
+        if kind == "ficha":
+            return '<a href="{}">{}</a>'.format(product_href(p, depth), esc(text or p["name"]))
+        if kind == "enlace":
+            return '<a href="{}" target="_blank" rel="nofollow noopener sponsored">{}</a>'.format(
+                esc(p["affiliate_url"]), esc(text or p["name"]))
+        if kind == "figura":
+            caption = ""
+            if text:
+                caption = "<figcaption>{}</figcaption>".format(esc(text))
+            return '<figure class="article-figure"><a href="{}">{}</a>{}</figure>'.format(
+                product_href(p, depth), product_img(p, 0, depth=depth), caption)
+        return text or ""
+
+    return re.sub(r"\[\[(ficha|enlace|figura):([a-z0-9-]+)\|?([^\]]*)\]\]", repl, body)
+
+
+def mentioned_block(guia, products, depth=1):
+    ids = guia.get("productos", [])
+    if not ids:
+        return ""
+    cards = ""
+    for pid in ids:
+        p = product_by_id(products, pid)
+        if not p:
+            continue
+        price = p.get("discountedPrice") or p.get("retailPrice")
+        cards += """<article class="mentioned-card">
+  <div class="product-card-img">{img}</div>
+  <div class="product-card-brand">{marca}</div>
+  <h3><a href="{href}">{name}</a></h3>
+  <span class="price-current">{price}</span>
+  <p class="mentioned-links"><a href="{href}">Ver análisis</a><a href="{aff}" target="_blank" rel="nofollow noopener sponsored">Ver en Amazon</a></p>
+</article>
+""".format(img=product_img(p, 0, depth=depth), marca=esc(p["marca"]), href=product_href(p, depth),
+           name=esc(p["name"]), price=format_price(price), aff=esc(p["affiliate_url"]))
+
+    return """<section class="mentioned">
+  <h2>Productos mencionados en esta guía</h2>
+  <div class="mentioned-grid">
+{cards}  </div>
+  <p class="price-note">Precios orientativos, consultados en Amazon. Pueden cambiar en cualquier momento.</p>
+</section>""".format(cards=cards)
+
+
+def guide_og_image(guia, products):
+    for pid in guia.get("productos", []):
+        p = product_by_id(products, pid)
+        if p and p.get("images"):
+            return p["images"][0]
+    return ""
+
+
+def build_guia(guia, products):
+    body = expand_tokens(guia.get("cuerpo", ""), products, depth=1)
+    canonical = "guias/{}.html".format(guia["slug"])
+
+    content = """{head}
+{nav}
+<main id="main">
+<article class="article">
+  <div class="container article-content">
+    <nav class="breadcrumb">
+      <a href="../index.html">Inicio</a> <span class="breadcrumb-sep">/</span>
+      <a href="index.html">Guías</a> <span class="breadcrumb-sep">/</span>
+      <span>{cat}</span>
+    </nav>
+    <header class="article-header">
+      <h1>{title}</h1>
+      <p class="article-meta">{fecha} · Lectura: {lectura}</p>
+    </header>
+    <p class="article-lead">{lead}</p>
+    <div class="article-body">
+{body}
+    </div>
+    {mentioned}
+  </div>
+</article>
+</main>
+{footer}
+{scripts}""".format(
+        head=head_html(guia["title"], guia["meta_desc"], depth=1, canonical=canonical,
+                       og_image=guide_og_image(guia, products), og_type="article"),
+        nav=nav_html("guias", depth=1),
+        cat=esc(guia.get("categoria", "Guía")),
+        title=esc(guia["title"]),
+        fecha=esc(guia.get("fecha_texto", "")),
+        lectura=esc(guia.get("lectura", "")),
+        lead=esc(guia.get("lead", "")),
+        body=body,
+        mentioned=mentioned_block(guia, products, depth=1),
+        footer=footer_html(depth=1),
+        scripts=scripts_html(depth=1),
+    )
+
+    outdir = os.path.join(BASE, "guias")
+    os.makedirs(outdir, exist_ok=True)
+    with open(os.path.join(outdir, guia["slug"] + ".html"), "w", encoding="utf-8") as f:
+        f.write(content)
+    print("  - Guía: guias/{}.html".format(guia["slug"]))
+
+
+def guide_list_items(guias, depth=1, limit=None):
+    prefix = "../" * depth
+    items = ""
+    for g in (guias[:limit] if limit else guias):
+        items += """<li class="guide-item">
+  <p class="article-meta">{fecha} · {cat}</p>
+  <h3><a href="{prefix}guias/{slug}.html">{title}</a></h3>
+  <p>{extracto}</p>
+  <a class="guide-item-link" href="{prefix}guias/{slug}.html">Leer la guía</a>
+</li>
+""".format(prefix=prefix, slug=g["slug"], title=esc(g["title"]),
+           extracto=esc(g.get("extracto", "")), fecha=esc(g.get("fecha_texto", "")),
+           cat=esc(g.get("categoria", "")))
+    return items
+
+
+def build_guias_index(guias):
+    items = guide_list_items(guias, depth=1)
+
+    content = """{head}
+{nav}
+<main id="main">
+<section class="page-header">
+  <div class="container container-narrow">
+    <nav class="breadcrumb">
+      <a href="../index.html">Inicio</a> <span class="breadcrumb-sep">/</span>
+      <span>Guías</span>
+    </nav>
+    <h1>Guías</h1>
+    <p>Artículos sobre humedad, calefacción y confort en casa: cómo detectar un problema, qué opciones hay y qué aparato tiene sentido en cada caso.</p>
+  </div>
+</section>
+<section class="home-section">
+  <div class="container container-narrow">
+    <ul class="guide-list">
+{items}    </ul>
+  </div>
+</section>
+<section class="home-section">
+  <div class="container container-narrow">
+    <h2>Guías de compra por categoría</h2>
+    <ul>
+      <li><a href="../guia-deshumidificadores.html">Cómo elegir el mejor deshumidificador para tu hogar</a></li>
+      <li><a href="../guia-calefactores.html">Cómo elegir el mejor calefactor para tu hogar</a></li>
+    </ul>
+  </div>
+</section>
+</main>
+{footer}
+{scripts}""".format(
+        head=head_html("Guías", "Guías prácticas sobre humedad, calefacción y climatización del hogar: cómo detectar problemas y qué soluciones funcionan de verdad.", depth=1, canonical="guias/"),
+        nav=nav_html("guias", depth=1),
+        items=items,
+        footer=footer_html(depth=1),
+        scripts=scripts_html(depth=1),
+    )
+
+    outdir = os.path.join(BASE, "guias")
+    os.makedirs(outdir, exist_ok=True)
+    with open(os.path.join(outdir, "index.html"), "w", encoding="utf-8") as f:
+        f.write(content)
+    print("  - guias/index.html")
+
+
+# ── Portada ───────────────────────────────────
+
+def home_card(p):
+    price = p.get("discountedPrice") or p.get("retailPrice")
+    return """<article class="product-card">
+  <div class="product-card-img">{img}</div>
+  <div class="product-card-body">
+    <div class="product-card-brand">{marca}</div>
+    <h3 class="product-card-name"><a href="{href}">{name}</a></h3>
+    <p class="product-card-desc">{desc}</p>
+    <div class="product-card-footer">
+      <div class="price-block"><span class="price-current">{price}</span></div>
+      <span class="stars">{stars} <span class="stars-count">({res})</span></span>
+    </div>
+  </div>
+</article>
+""".format(img=product_img(p, 0, depth=0), marca=esc(p["marca"]), href=product_href(p, depth=0),
+           name=esc(p["name"]), desc=esc(p.get("description", "")), price=format_price(price),
+           stars=stars_html(p.get("valoracion_media", 0)), res=p.get("resenas_cantidad", 0))
+
+
+def build_home(products, guias):
+    cards = ""
+    for pid in HOME_FEATURED:
+        p = product_by_id(products, pid)
+        if p:
+            cards += home_card(p)
+
+    cats = ""
+    for key in CATEGORY_ORDER:
+        cfg = CATEGORY_CONFIG[key]
+        n = len([p for p in products if p["category"] == key])
+        cats += '      <li><a href="{slug}/index.html">{title}</a> <span class="cat-count">{n} productos analizados</span></li>\n'.format(
+            slug=cfg["slug"], title=esc(cfg["title"]), n=n)
+    cats += '      <li class="cat-soon">{} <span>(en preparación)</span></li>\n'.format(", ".join(PROXIMAMENTE))
+
+    content = """{head}
+{nav}
+<main id="main">
+<div class="container">
+
+  <section class="home-intro">
+    <h1>Guías y análisis de climatización para el hogar</h1>
+    <p>Analizamos aparatos de climatización para casa — deshumidificadores, calefactores y todo lo que ayuda a estar cómodo dentro — y contamos cuál tiene sentido en cada situación. Leemos las opiniones de compradores reales, comparamos las especificaciones y explicamos lo que no aparece en la caja.</p>
+  </section>
+
+  <section class="home-section">
+    <div class="home-section-head">
+      <h2>Últimas guías</h2>
+      <a href="guias/index.html">Ver todas las guías</a>
+    </div>
+    <ul class="guide-list">
+{guias}    </ul>
+  </section>
+
+  <section class="home-section">
+    <div class="home-section-head">
+      <h2>Categorías</h2>
+    </div>
+    <ul class="cat-list">
+{cats}    </ul>
+  </section>
+
+  <section class="home-section">
+    <div class="home-section-head">
+      <h2>Productos destacados</h2>
+      <a href="comparador.html">Comparar modelos</a>
+    </div>
+    <div class="product-grid featured-grid">
+{cards}    </div>
+    <p class="price-note">Precios orientativos, consultados en Amazon. Pueden cambiar en cualquier momento.</p>
+  </section>
+
+</div>
+</main>
+{footer}
+{scripts}""".format(
+        head=head_html("El Clima de Casa", "Guías y comparativas independientes de deshumidificadores y calefactores para el hogar. Qué comprar, cuándo hace falta y qué modelo conviene en cada caso.",
+                       canonical="", full_title="El Clima de Casa — Guías de climatización para tu hogar"),
+        nav=nav_html("inicio"),
+        guias=guide_list_items(guias, depth=0, limit=3),
+        cats=cats,
+        cards=cards,
+        footer=footer_html(),
+        scripts=scripts_html(),
+    )
+
+    with open(os.path.join(BASE, "index.html"), "w", encoding="utf-8") as f:
+        f.write(content)
+    print("  - index.html")
+
+
+# ── Sobre nosotros ────────────────────────────
+
+def build_sobre_nosotros():
+    content = """{head}
+{nav}
+<main id="main">
+<section class="article">
+  <div class="container article-content">
+    <nav class="breadcrumb">
+      <a href="index.html">Inicio</a> <span class="breadcrumb-sep">/</span>
+      <span>Sobre nosotros</span>
+    </nav>
+    <h1>Sobre El Clima de Casa</h1>
+    <div class="article-body">
+      <p>Somos un pequeño equipo independiente que analiza productos de climatización del hogar desde España. Empezamos con lo que más cuesta elegir — deshumidificadores y calefactores — y vamos añadiendo categorías a medida que tenemos algo útil que contar sobre ellas.</p>
+      <p>La idea es sencilla: que puedas decidir qué comprar en diez minutos y sin dudas. Para cada producto leemos cientos de opiniones de compradores reales, comparamos las especificaciones con las de modelos parecidos y señalamos lo que no se ve en la ficha del fabricante: si hace ruido de verdad, si el depósito se queda corto, si esa función «smart» sirve para algo.</p>
+      <p>También escribimos guías, porque muchas veces la pregunta no es qué modelo comprar, sino si hace falta comprar algo. Si tu problema de humedad se arregla ventilando diez minutos al día, preferimos decírtelo.</p>
+      <p>No vendemos nada ni tenemos acuerdos con las marcas. Cuando compras a través de nuestros enlaces de Amazon recibimos una pequeña comisión, sin coste adicional para ti, y eso es lo que mantiene el sitio en marcha. La comisión es la misma se elija el modelo que se elija, así que no hay ningún motivo para recomendarte el más caro: lo puedes comprobar en el <a href="aviso-afiliados.html">aviso de afiliación</a>.</p>
+      <p>Los precios que ves son los del día en que consultamos Amazon y cambian a menudo; siempre indicamos la fecha. Si encuentras un dato mal, un producto que ha cambiado de versión o algo que se nos ha escapado, escríbenos a <a href="mailto:hola@jordiescodasirvent.com">hola@jordiescodasirvent.com</a>.</p>
+    </div>
+  </div>
+</section>
+</main>
+{footer}
+{scripts}""".format(
+        head=head_html("Sobre nosotros", "Quiénes somos, cómo analizamos los productos de climatización y cómo se financia elclimadecasa.com.", canonical="sobre-nosotros.html"),
+        nav=nav_html("sobre-nosotros"),
+        footer=footer_html(),
+        scripts=scripts_html(),
+    )
+
+    with open(os.path.join(BASE, "sobre-nosotros.html"), "w", encoding="utf-8") as f:
+        f.write(content)
+    print("  - sobre-nosotros.html")
+
+
+# ── Sitemap ──────────────────────────────────
+
+def build_sitemap(products, guias):
+    today = datetime.now().strftime("%Y-%m-%d")
+    urls = [("", today, "weekly", "1.0")]
+    urls.append(("guias/", today, "weekly", "0.9"))
+    for g in guias:
+        urls.append(("guias/{}.html".format(g["slug"]), g.get("fecha", today), "monthly", "0.8"))
+    for key in CATEGORY_ORDER:
+        cfg = CATEGORY_CONFIG[key]
+        urls.append(("{}/".format(cfg["slug"]), today, "weekly", "0.9"))
+        for p in [x for x in products if x["category"] == key]:
+            urls.append(("{}/{}.html".format(cfg["slug"], product_slug(p)), today, "monthly", "0.7"))
+    urls.append(("comparador.html", today, "weekly", "0.6"))
+    urls.append(("guia-deshumidificadores.html", today, "monthly", "0.7"))
+    urls.append(("guia-calefactores.html", today, "monthly", "0.7"))
+    urls.append(("sobre-nosotros.html", today, "yearly", "0.5"))
+    for f in ("aviso-afiliados.html", "privacidad.html", "aviso-legal.html"):
+        urls.append((f, today, "yearly", "0.3"))
+
+    body = ""
+    for loc, lastmod, freq, prio in urls:
+        body += """  <url>
+    <loc>{site}/{loc}</loc>
+    <lastmod>{lastmod}</lastmod>
+    <changefreq>{freq}</changefreq>
+    <priority>{prio}</priority>
+  </url>
+""".format(site=SITE_URL, loc=loc, lastmod=lastmod, freq=freq, prio=prio)
+
+    xml = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{body}</urlset>
+""".format(body=body)
+
+    with open(os.path.join(BASE, "sitemap.xml"), "w", encoding="utf-8") as f:
+        f.write(xml)
+    print("  - sitemap.xml ({} URLs)".format(len(urls)))
+
 
 # ── Main ────────────────────────────────────────────────────
 
 def main():
-    print("🏗️  Generando sitio elclimadecasa.com...")
+    print("Generando sitio elclimadecasa.com...")
     products = load_products()
-    print(f"  📦 {len(products)} productos cargados")
+    guias = load_guias()
+    print("  {} productos y {} guías cargadas".format(len(products), len(guias)))
 
     rebuild_db_js(products)
 
@@ -987,11 +1365,20 @@ def main():
     build_guide_calefactores()
     build_legal_pages()
 
+    for g in guias:
+        build_guia(g, products)
+    build_guias_index(guias)
+
+    build_home(products, guias)
+    build_sobre_nosotros()
+    build_sitemap(products, guias)
+
     dh_count = len([p for p in products if p["category"] == "deshumidificadores"])
     cal_count = len([p for p in products if p["category"] == "calefactores"])
-    print(f"\n✅ Build completo. {dh_count} deshumidificadores + {cal_count} calefactores")
-    print(f"   {dh_count + cal_count} fichas + 2 categorías + comparador + 2 guías + 3 legales")
-    print(f"   Cache-buster: ?v={VER}")
+    print("\nBuild completo: {} fichas, 2 categorías, {} guías, comparador, portada y legales".format(
+        dh_count + cal_count, len(guias)))
+    print("   Cache-buster: ?v={}".format(VER))
+
 
 if __name__ == "__main__":
     main()
