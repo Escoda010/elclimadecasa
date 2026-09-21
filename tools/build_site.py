@@ -353,7 +353,9 @@ def pros_cons_html(p):
 # ── Slug ────────────────────────────────────────────────────
 
 def product_slug(p):
-    return SLUG_MAP.get(p["id"], p["id"])
+    # El slug viaja dentro de la propia ficha (datos/productos.json). SLUG_MAP
+    # se mantiene como respaldo para las fichas antiguas que aun no lo llevan.
+    return p.get("slug") or SLUG_MAP.get(p["id"], p["id"])
 
 # ── Product page (ficha) ───────────────────────────────────
 

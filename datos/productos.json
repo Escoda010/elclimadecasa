@@ -1,6 +1,7 @@
 [
   {
     "id": "dh-001",
+    "slug": "pro-breeze-omnidry-20l",
     "asin": "B0CZ114G68",
     "name": "Pro Breeze OmniDry 20L Wi-Fi",
     "marca": "Pro Breeze",
@@ -70,6 +71,7 @@
   },
   {
     "id": "dh-002",
+    "slug": "pro-breeze-compacto-12l",
     "asin": "B0D1RBCYZ5",
     "name": "Pro Breeze Compacto 12L",
     "marca": "Pro Breeze",
@@ -138,6 +140,7 @@
   },
   {
     "id": "dh-003",
+    "slug": "delonghi-ariadry-dexd216rf",
     "asin": "B0CJ2T3H6G",
     "name": "De'Longhi AriaDry DEXD216RF",
     "marca": "De'Longhi",
@@ -207,6 +210,7 @@
   },
   {
     "id": "cal-001",
+    "slug": "jata-tc73-calefactor-ceramico-1200w",
     "asin": "B01N2IA9J2",
     "name": "Jata TC73 Calefactor Cerámico 1200W",
     "marca": "Jata",
@@ -238,7 +242,7 @@
     "control_remoto": false,
     "control_app": false,
     "oscilacion": false,
-    "proteccion_bano": false,
+    "proteccion_bano": "No",
     "antivuelco": true,
     "anti_heladas": false,
     "peso_kg": 1.2,
@@ -276,6 +280,7 @@
   },
   {
     "id": "cal-002",
+    "slug": "cecotec-ready-warm-10100-smart-ceramic",
     "asin": "B08LNPJT9G",
     "name": "Cecotec Ready Warm 10100 Smart Ceramic",
     "marca": "Cecotec",
@@ -343,6 +348,7 @@
   },
   {
     "id": "cal-003",
+    "slug": "pro-breeze-mini-ceramico-2000w",
     "asin": "B089M91Y86",
     "name": "Pro Breeze Mini Calefactor Cerámico 2000W",
     "marca": "Pro Breeze",
@@ -409,6 +415,7 @@
   },
   {
     "id": "cal-004",
+    "slug": "delonghi-trrs-0920-radia-s",
     "asin": "B00ZUUEBOQ",
     "name": "De'Longhi Radia S TRRS0920",
     "marca": "De'Longhi",
@@ -476,6 +483,7 @@
   },
   {
     "id": "cal-005",
+    "slug": "orbegozo-rre-1310",
     "asin": "B01MG2J6FG",
     "name": "Orbegozo RRE 1310 Emisor Térmico",
     "marca": "Orbegozo",
@@ -543,6 +551,7 @@
   },
   {
     "id": "cal-006",
+    "slug": "orbegozo-rf-2000-radiador-aceite",
     "asin": "B07H81BDGX",
     "name": "Orbegozo RF 2000 Radiador de Aceite",
     "marca": "Orbegozo",
@@ -610,6 +619,7 @@
   },
   {
     "id": "cal-007",
+    "slug": "rowenta-vectissimo-ii-co3030",
     "asin": "B008H0C51C",
     "name": "Rowenta Vectissimo II CO3030",
     "marca": "Rowenta",
@@ -676,6 +686,7 @@
   },
   {
     "id": "cal-008",
+    "slug": "cecotec-ready-warm-6650-crystal-connection",
     "asin": "B07JNT72J3",
     "name": "Cecotec Ready Warm 6650 Crystal Connection",
     "marca": "Cecotec",
@@ -743,6 +754,7 @@
   },
   {
     "id": "cal-009",
+    "slug": "orbegozo-bp-5003",
     "asin": "B0055ZNEO4",
     "name": "Orbegozo BP 5003",
     "marca": "Orbegozo",
