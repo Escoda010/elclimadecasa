@@ -265,6 +265,17 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 2.5rem 0; }
 }
 .guide-list li { margin: 0; }
 
+.related-guides {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.related-more {
+  margin-top: 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
 .guide-item h3 {
   font-family: var(--serif);
   font-size: 1.25rem;

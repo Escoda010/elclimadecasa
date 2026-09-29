@@ -359,7 +359,8 @@ def product_slug(p):
 
 # ── Product page (ficha) ───────────────────────────────────
 
-def build_ficha(p, all_products):
+def build_ficha(p, all_products, guias=None):
+    guias = guias or []
     cat = p.get("category", "deshumidificadores")
     cfg = CATEGORY_CONFIG.get(cat, CATEGORY_CONFIG["deshumidificadores"])
     slug = product_slug(p)
@@ -393,6 +394,12 @@ def build_ficha(p, all_products):
   <h3>Productos similares</h3>
   <div class="similar-scroll">{cards}</div>
 </section>'''
+
+    pie_guias = (f'<p class="related-more"><a href="../{cfg["guide_slug"]}.html">'
+                 f'Guía de compra de {esc(cfg["title"].lower())}</a></p>')
+    guias_html = guias_relacionadas_html(
+        guias_para_producto(guias, p, limit=3), depth=1,
+        titulo="Guías relacionadas", pie_html=pie_guias)
 
     content = f'''{head_html(p["name"], p.get("description",""), depth=1, canonical=f'{cfg["slug"]}/{slug}.html', og_image=(p.get("images") or [""])[0], og_type="product")}
 {nav_html(cfg["nav_key"], depth=1)}
@@ -460,6 +467,8 @@ def build_ficha(p, all_products):
 
     {similar_html}
 
+    {guias_html}
+
     <div style="text-align:center;margin:2rem 0">
       <a href="../comparador.html#{p["id"]}" class="btn btn-outline">Añadir al comparador</a>
     </div>
@@ -478,7 +487,8 @@ def build_ficha(p, all_products):
 
 # ── Category index page ────────────────────────────────────
 
-def build_category(products, cat_key):
+def build_category(products, cat_key, guias=None):
+    guias = guias or []
     cfg = CATEGORY_CONFIG[cat_key]
     cat_products = [p for p in products if p["category"] == cat_key]
 
@@ -601,6 +611,18 @@ def build_category(products, cat_key):
       <span class="results-count">{len(cat_products)} productos</span>
     </div>'''
 
+    cat_guias = guias_de_categoria(guias, cat_key)
+    guias_cat_html = ""
+    if cat_guias:
+        guias_cat_html = '''<section class="home-section">
+  <div class="container">
+    <h2>Guías de {t}</h2>
+    <ul class="guide-list">
+{items}    </ul>
+  </div>
+</section>'''.format(t=esc(cfg["title"].lower()),
+                     items=guide_list_items(cat_guias, depth=1))
+
     content = f'''{head_html(cfg["title"], cfg["meta_desc"], depth=1, canonical=f'{cfg["slug"]}/')}
 {nav_html(cfg["nav_key"], depth=1)}
 <main id="main">
@@ -629,6 +651,7 @@ def build_category(products, cat_key):
     </div>
   </div>
 </section>
+{guias_cat_html}
 </main>
 {footer_html(depth=1)}
 {scripts_html(depth=1)}'''
@@ -1072,9 +1095,25 @@ def guide_og_image(guia, products):
     return ""
 
 
-def build_guia(guia, products):
+def build_guia(guia, products, guias=None):
+    guias = guias or []
     body = expand_tokens(guia.get("cuerpo", ""), products, depth=1)
     canonical = "guias/{}.html".format(guia["slug"])
+
+    cat_key = cat_key_por_titulo(guia.get("categoria", ""))
+    otras = []
+    pie_guias = ""
+    if cat_key:
+        cfg_g = CATEGORY_CONFIG[cat_key]
+        otras = [g for g in guias_de_categoria(guias, cat_key)
+                 if g["slug"] != guia["slug"]][:3]
+        pie_guias = ('<p class="related-more">'
+                     '<a href="../{slug}/index.html">Ver todos los {t}</a> · '
+                     '<a href="../{gs}.html">Guía de compra</a></p>').format(
+                        slug=cfg_g["slug"], t=esc(cfg_g["title"].lower()),
+                        gs=cfg_g["guide_slug"])
+    sigue_leyendo = guias_relacionadas_html(
+        otras, depth=1, titulo="Sigue leyendo", pie_html=pie_guias)
 
     content = """{head}
 {nav}
@@ -1095,6 +1134,7 @@ def build_guia(guia, products):
 {body}
     </div>
     {mentioned}
+    {sigue}
   </div>
 </article>
 </main>
@@ -1110,6 +1150,7 @@ def build_guia(guia, products):
         lead=esc(guia.get("lead", "")),
         body=body,
         mentioned=mentioned_block(guia, products, depth=1),
+        sigue=sigue_leyendo,
         footer=footer_html(depth=1),
         scripts=scripts_html(depth=1),
     )
@@ -1134,6 +1175,45 @@ def guide_list_items(guias, depth=1, limit=None):
            extracto=esc(g.get("extracto", "")), fecha=esc(g.get("fecha_texto", "")),
            cat=esc(g.get("categoria", "")))
     return items
+
+
+# ── Enlazado interno: guías relacionadas ──────────────────────
+
+def cat_key_por_titulo(titulo):
+    """De 'Deshumidificadores'/'Calefactores' a su clave de categoría."""
+    for k, c in CATEGORY_CONFIG.items():
+        if c["title"] == titulo:
+            return k
+    return None
+
+
+def guias_de_categoria(guias, cat_key):
+    titulo = CATEGORY_CONFIG.get(cat_key, {}).get("title", "")
+    return [g for g in guias if g.get("categoria") == titulo]
+
+
+def guias_para_producto(guias, product, limit=3):
+    """Guías que mencionan este producto primero; luego, las de su categoría."""
+    pid = product["id"]
+    mencionan = [g for g in guias if pid in g.get("productos", [])]
+    vistos = {g["slug"] for g in mencionan}
+    resto = [g for g in guias_de_categoria(guias, product.get("category", ""))
+             if g["slug"] not in vistos]
+    return (mencionan + resto)[:limit]
+
+
+def guias_relacionadas_html(subset, depth, titulo="Guías relacionadas", pie_html=""):
+    if not subset and not pie_html:
+        return ""
+    lista = ""
+    if subset:
+        lista = '<ul class="guide-list">\n{}    </ul>'.format(
+            guide_list_items(subset, depth=depth))
+    return '''<section class="home-section related-guides">
+      <h2>{titulo}</h2>
+      {lista}
+      {pie}
+    </section>'''.format(titulo=esc(titulo), lista=lista, pie=pie_html)
 
 
 def build_guias_index(guias):
@@ -1288,18 +1368,55 @@ def build_sobre_nosotros():
     </nav>
     <h1>Sobre El Clima de Casa</h1>
     <div class="article-body">
-      <p>Somos un pequeño equipo independiente que analiza productos de climatización del hogar desde España. Empezamos con lo que más cuesta elegir — deshumidificadores y calefactores — y vamos añadiendo categorías a medida que tenemos algo útil que contar sobre ellas.</p>
-      <p>La idea es sencilla: que puedas decidir qué comprar en diez minutos y sin dudas. Para cada producto leemos cientos de opiniones de compradores reales, comparamos las especificaciones con las de modelos parecidos y señalamos lo que no se ve en la ficha del fabricante: si hace ruido de verdad, si el depósito se queda corto, si esa función «smart» sirve para algo.</p>
-      <p>También escribimos guías, porque muchas veces la pregunta no es qué modelo comprar, sino si hace falta comprar algo. Si tu problema de humedad se arregla ventilando diez minutos al día, preferimos decírtelo.</p>
-      <p>No vendemos nada ni tenemos acuerdos con las marcas. Cuando compras a través de nuestros enlaces de Amazon recibimos una pequeña comisión, sin coste adicional para ti, y eso es lo que mantiene el sitio en marcha. La comisión es la misma se elija el modelo que se elija, así que no hay ningún motivo para recomendarte el más caro: lo puedes comprobar en el <a href="aviso-afiliados.html">aviso de afiliación</a>.</p>
-      <p>Los precios que ves son los del día en que consultamos Amazon y cambian a menudo; siempre indicamos la fecha. Si encuentras un dato mal, un producto que ha cambiado de versión o algo que se nos ha escapado, escríbenos a <a href="mailto:hola@jordiescodasirvent.com">hola@jordiescodasirvent.com</a>.</p>
+      <h2>Quién está detrás</h2>
+      <p><img src="assets/img/jordi.jpg" alt="Jordi Escoda Sirvent" width="160" height="160" style="border-radius:50%;float:left;margin:0 24px 12px 0;object-fit:cover"></p>
+      <p>Me llamo <strong>Jordi Escoda Sirvent</strong> y escribo este sitio desde Xixona, un pueblo del interior de Alicante donde en invierno hace frío de verdad y en verano la humedad de la costa se nota a treinta kilómetros. Empecé <em>El Clima de Casa</em> porque cada vez que un familiar me preguntaba qué calefactor comprar terminaba mandándole capturas de Amazon y notas por WhatsApp: tenía sentido ordenarlo en un sitio.</p>
+      <p>Trabajo en el mundo digital desde hace años — llevo también, junto a mi hermano Mario, la pequeña agencia <a href="https://escodaproject.com" rel="noopener">Escoda Project</a>, y tengo mi propia web en <a href="https://jordiescodasirvent.com" rel="noopener">jordiescodasirvent.com</a>. Este proyecto lo llevo yo solo.</p>
+
+      <h2>Cómo analizamos los productos</h2>
+      <p>La idea es sencilla: que puedas decidir qué comprar en diez minutos y sin dudas. Para cada producto leo cientos de opiniones de compradores reales, comparo las especificaciones con las de modelos parecidos y señalo lo que no se ve en la ficha del fabricante: si hace ruido de verdad, si el depósito se queda corto, si esa función «smart» sirve para algo.</p>
+      <p>También escribo guías, porque muchas veces la pregunta no es qué modelo comprar, sino si hace falta comprar algo. Si tu problema de humedad se arregla ventilando diez minutos al día, prefiero decírtelo.</p>
+
+      <h2>Cómo se financia el sitio</h2>
+      <p>No vendo nada ni tengo acuerdos con las marcas. Cuando compras a través de mis enlaces de Amazon recibo una pequeña comisión, sin coste adicional para ti, y eso es lo que mantiene el sitio en marcha. La comisión es la misma se elija el modelo que se elija, así que no hay ningún motivo para recomendarte el más caro: lo puedes comprobar en el <a href="aviso-afiliados.html">aviso de afiliación</a>.</p>
+      <p>Los precios que ves son los del día en que consultamos Amazon y cambian a menudo; siempre indicamos la fecha.</p>
+
+      <h2>Contacto</h2>
+      <p>Si encuentras un dato mal, un producto que ha cambiado de versión, quieres proponer un tema o algo se me ha escapado, escríbeme a <a href="mailto:hola@jordiescodasirvent.com">hola@jordiescodasirvent.com</a>. Respondo yo mismo, normalmente en el mismo día.</p>
+      <p style="color:#666;font-size:0.9em;margin-top:32px">Jordi Escoda Sirvent · Xixona, Alicante (España) · <a href="https://jordiescodasirvent.com" rel="noopener">jordiescodasirvent.com</a></p>
     </div>
   </div>
 </section>
+<script type="application/ld+json">
+{{
+  "@context": "https://schema.org",
+  "@type": "AboutPage",
+  "url": "https://elclimadecasa.com/sobre-nosotros.html",
+  "mainEntity": {{
+    "@type": "Person",
+    "name": "Jordi Escoda Sirvent",
+    "url": "https://jordiescodasirvent.com",
+    "email": "hola@jordiescodasirvent.com",
+    "image": "https://elclimadecasa.com/assets/img/jordi.jpg",
+    "jobTitle": "Editor de El Clima de Casa",
+    "address": {{
+      "@type": "PostalAddress",
+      "addressLocality": "Xixona",
+      "addressRegion": "Alicante",
+      "addressCountry": "ES"
+    }},
+    "worksFor": {{
+      "@type": "Organization",
+      "name": "Escoda Project",
+      "url": "https://escodaproject.com"
+    }}
+  }}
+}}
+</script>
 </main>
 {footer}
 {scripts}""".format(
-        head=head_html("Sobre nosotros", "Quiénes somos, cómo analizamos los productos de climatización y cómo se financia elclimadecasa.com.", canonical="sobre-nosotros.html"),
+        head=head_html("Sobre nosotros", "Jordi Escoda Sirvent, desde Xixona (Alicante), analiza productos de climatización para el hogar. Cómo trabajamos, cómo se financia el sitio y cómo contactar.", canonical="sobre-nosotros.html"),
         nav=nav_html("sobre-nosotros"),
         footer=footer_html(),
         scripts=scripts_html(),
@@ -1360,10 +1477,10 @@ def main():
     rebuild_db_js(products)
 
     for p in products:
-        build_ficha(p, products)
+        build_ficha(p, products, guias)
 
     for cat_key in CATEGORY_CONFIG:
-        build_category(products, cat_key)
+        build_category(products, cat_key, guias)
 
     build_comparador()
     build_guide_deshumidificadores()
@@ -1371,7 +1488,7 @@ def main():
     build_legal_pages()
 
     for g in guias:
-        build_guia(g, products)
+        build_guia(g, products, guias)
     build_guias_index(guias)
 
     build_home(products, guias)

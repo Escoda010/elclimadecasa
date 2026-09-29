@@ -56,6 +56,19 @@ Options -Indexes
   RewriteCond %{THE_REQUEST} \s/+(([^?\s]*/)?)index\.html[\s?] [NC]
   RewriteRule ^ /%1 [R=301,L]
 
+  # ── Limpieza de la migracion desde el WordPress viejo (aire acondicionado) ──
+  # Legales del WP antiguo -> equivalentes actuales (301, conserva la senal).
+  RewriteRule ^aviso-legal/?$          /aviso-legal.html [R=301,L]
+  RewriteRule ^politica-de-cookies/?$  /privacidad.html  [R=301,L]
+  # Basura de WordPress y contenido viejo sin equivalente -> 410 Gone,
+  # para que Google los suelte rapido y dejen de llegar avisos de indexacion.
+  RewriteRule ^comments/feed/?$                            - [G,L]
+  RewriteRule ^privacy-policy/?$                           - [G,L]
+  RewriteRule ^category/                                   - [G,L]
+  RewriteRule ^cuantas-frigorias-necesito/?$               - [G,L]
+  RewriteRule ^cuanto-cuesta-instalar-aire-acondicionado/?$ - [G,L]
+  RewriteRule ^conductos-vs-split/?$                       - [G,L]
+
   # URLs limpias: /guias/humedad sirve guias/humedad.html
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteCond %{REQUEST_FILENAME}.html -f
