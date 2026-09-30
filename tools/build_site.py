@@ -135,6 +135,46 @@ COMPARE_SPECS_CAL = [
     {"label": "Antivuelco", "key": "antivuelco", "type": "bool"},
 ]
 
+SPEC_FIELDS_PUR = [
+    ("Rendimiento", [
+        ("Cobertura máxima", "cobertura_m2", " m²"),
+        ("CADR (aire limpio/hora)", "cadr", " m³/h"),
+        ("Nivel de ruido", "ruido_db", " dB"),
+        ("Potencia", "potencia_w", " W"),
+        ("Velocidades", "niveles_velocidad", ""),
+    ]),
+    ("Filtración", [
+        ("Tipo de filtro", "tipo_filtro", ""),
+        ("Filtro HEPA", "filtro_hepa", None),
+        ("Carbón activo", "carbon_activo", None),
+        ("Prefiltro lavable", "prefiltro_lavable", None),
+        ("Vida útil del filtro", "vida_filtro_meses", " meses"),
+    ]),
+    ("Funciones", [
+        ("Sensor de calidad del aire", "sensor_calidad", None),
+        ("Modo automático", "modo_auto", None),
+        ("Modo noche", "modo_noche", None),
+        ("Temporizador", "temporizador", None),
+        ("Control por app", "control_app", None),
+        ("Aviso de cambio de filtro", "indicador_filtro", None),
+    ]),
+    ("Dimensiones", [
+        ("Peso", "peso_kg", " kg"),
+        ("Dimensiones", "dimensiones_cm", " cm"),
+    ]),
+]
+
+COMPARE_SPECS_PUR = [
+    {"label": "Cobertura", "key": "cobertura_m2", "unit": " m²", "best": "max"},
+    {"label": "CADR", "key": "cadr", "unit": " m³/h", "best": "max"},
+    {"label": "Ruido", "key": "ruido_db", "unit": " dB", "best": "min"},
+    {"label": "Tipo de filtro", "key": "tipo_filtro", "unit": ""},
+    {"label": "Peso", "key": "peso_kg", "unit": " kg", "best": "min"},
+    {"label": "Sensor de calidad", "key": "sensor_calidad", "type": "bool"},
+    {"label": "Modo noche", "key": "modo_noche", "type": "bool"},
+    {"label": "Control app", "key": "control_app", "type": "bool"},
+]
+
 SUBCATEGORIES_CAL = [
     ("ceramico", "Cerámicos"),
     ("radiador-aceite", "Radiadores de aceite"),
@@ -177,6 +217,23 @@ CATEGORY_CONFIG = {
             f'{p.get("cobertura_m2","—")} m²',
         ],
     },
+    "purificadores": {
+        "title": "Purificadores",
+        "slug": "purificadores",
+        "nav_key": "purificadores",
+        "spec_fields": SPEC_FIELDS_PUR,
+        "compare_specs": COMPARE_SPECS_PUR,
+        "guide_slug": "guia-purificadores",
+        "guide_title": "Guía de compra de purificadores de aire",
+        "meta_desc": "Los mejores purificadores de aire para tu hogar. Compara modelos por cobertura, CADR, filtro HEPA y nivel de ruido.",
+        "category_desc": "Compara los mejores purificadores de aire del mercado. Filtros por precio, cobertura y nivel de ruido para encontrar el modelo ideal contra alergias, mascotas, humo o polvo.",
+        "subcategories": [],
+        "chips": lambda p: [
+            f'{p.get("cobertura_m2","—")} m²',
+            f'{p.get("cadr","—")} m³/h',
+            f'{p.get("ruido_db","—")} dB',
+        ],
+    },
 }
 
 def enlace_canonico(html):
@@ -203,6 +260,7 @@ NAV_LINKS = [
     ("guias/index.html", "Guías", "guias"),
     ("deshumidificadores/index.html", "Deshumidificadores", "deshumidificadores"),
     ("calefactores/index.html", "Calefactores", "calefactores"),
+    ("purificadores/index.html", "Purificadores", "purificadores"),
     ("comparador.html", "Comparador", "comparador"),
     ("sobre-nosotros.html", "Sobre nosotros", "sobre-nosotros"),
 ]
@@ -242,6 +300,7 @@ def footer_html(depth=0):
       <li><a href="{prefix}guias/index.html">Guías</a></li>
       <li><a href="{prefix}deshumidificadores/index.html">Deshumidificadores</a></li>
       <li><a href="{prefix}calefactores/index.html">Calefactores</a></li>
+      <li><a href="{prefix}purificadores/index.html">Purificadores</a></li>
       <li><a href="{prefix}comparador.html">Comparador</a></li>
       <li><a href="{prefix}sobre-nosotros.html">Sobre nosotros</a></li>
       <li><a href="{prefix}aviso-afiliados.html">Aviso de afiliación</a></li>
@@ -569,6 +628,48 @@ def build_category(products, cat_key, guias=None):
       </div>
       <span class="results-count">{len(cat_products)} productos</span>
     </div>'''
+    elif cat_key == "purificadores":
+        filters_html = f'''<div class="filters-bar">
+      <div class="filter-group">
+        <label for="filter-sort">Ordenar:</label>
+        <select id="filter-sort" class="filter-select">
+          <option value="relevancia">Relevancia</option>
+          <option value="precio-asc">Precio: menor a mayor</option>
+          <option value="precio-desc">Precio: mayor a menor</option>
+          <option value="cobertura">Mayor cobertura</option>
+          <option value="cadr">Mayor CADR</option>
+          <option value="silencio">Más silencioso</option>
+          <option value="valoracion">Mejor valorado</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-price">Precio máx:</label>
+        <select id="filter-price" class="filter-select">
+          <option value="0">Todos</option>
+          <option value="100">Hasta 100 €</option>
+          <option value="200">Hasta 200 €</option>
+          <option value="300">Hasta 300 €</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-coverage">Cobertura mín:</label>
+        <select id="filter-coverage" class="filter-select">
+          <option value="0">Todas</option>
+          <option value="20">20+ m²</option>
+          <option value="40">40+ m²</option>
+          <option value="60">60+ m²</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-noise">Ruido máx:</label>
+        <select id="filter-noise" class="filter-select">
+          <option value="0">Todos</option>
+          <option value="40">Hasta 40 dB</option>
+          <option value="50">Hasta 50 dB</option>
+        </select>
+      </div>
+      <span class="results-count">{len(cat_products)} productos</span>
+    </div>'''
     else:
         subcat_options = '<option value="">Todos</option>\n'
         for sc_key, sc_label in cfg.get("subcategories", []):
@@ -776,6 +877,95 @@ def build_guide_deshumidificadores():
     escribir(outpath, content)
     print(f"  - guia-deshumidificadores.html")
 
+# ── Guide: purificadores ───────────────────────────────────
+
+def build_guide_purificadores():
+    content = f'''{head_html("Cómo elegir el mejor purificador de aire para tu hogar", "Guía para elegir purificador de aire: cobertura, CADR, filtro HEPA, ruido y precio. Todo lo que conviene saber antes de comprar.", canonical="guia-purificadores.html", og_type="article")}
+{nav_html("guias")}
+<main id="main">
+<section class="guide">
+  <div class="container guide-content">
+    <nav class="breadcrumb">
+      <a href="index.html">Inicio</a> <span class="breadcrumb-sep">/</span>
+      <span>Guía de compra</span>
+    </nav>
+    <h1>Cómo elegir el mejor purificador de aire para tu hogar</h1>
+    <p style="color:var(--text-muted);margin-bottom:2rem">Actualizado: septiembre 2026 · Lectura: 8 minutos</p>
+
+    <div class="guide-toc">
+      <h3>En esta guía</h3>
+      <ol>
+        <li><a href="#por-que">¿Para qué sirve de verdad un purificador?</a></li>
+        <li><a href="#cobertura">Cobertura y CADR: el dato que importa</a></li>
+        <li><a href="#filtros">Filtros: HEPA, carbón activo y prefiltro</a></li>
+        <li><a href="#ruido">Nivel de ruido: los dB que importan de noche</a></li>
+        <li><a href="#funciones">Funciones que marcan la diferencia</a></li>
+        <li><a href="#precio">¿Cuánto debería costar?</a></li>
+        <li><a href="#recomendaciones">Nuestra selección</a></li>
+      </ol>
+    </div>
+
+    <h2 id="por-que">¿Para qué sirve de verdad un purificador?</h2>
+    <p>Un purificador de aire hace pasar el aire de la habitación por uno o varios filtros y retiene partículas que no ves: polvo fino, polen, pelo y caspa de mascotas, esporas de moho, humo y parte de los olores. No ventila ni sustituye a abrir la ventana, pero en una casa cerrada —con alergias, animales o una calle con mucho tráfico— reduce de forma notable lo que respiras.</p>
+    <p>Conviene tener claras sus limitaciones: no elimina el CO2 ni la humedad, y contra los virus su efecto es parcial. Si tu problema es la condensación o el moho por exceso de humedad, lo que necesitas es un <a href="deshumidificadores/index.html" style="color:var(--accent)">deshumidificador</a>, no un purificador.</p>
+
+    <h2 id="cobertura">Cobertura y CADR: el dato que importa</h2>
+    <p>Los fabricantes anuncian una cobertura en metros cuadrados, pero esa cifra suele calcularse para una sola renovación de aire por hora, que es poco. El dato honesto es el <strong>CADR</strong> (Clean Air Delivery Rate, en m³/h): cuánto aire limpio entrega por hora. A más CADR, antes limpia la sala y mejor la mantiene.</p>
+    <ul>
+      <li><strong>CADR de 150-250 m³/h:</strong> dormitorios y despachos (hasta 20-30 m²).</li>
+      <li><strong>CADR de 250-400 m³/h:</strong> salones y salas de estar (30-50 m²).</li>
+      <li><strong>Más de 400 m³/h:</strong> estancias grandes o diáfanas.</li>
+    </ul>
+    <p>Una regla práctica: elige un modelo cuya cobertura supere con holgura tu habitación, para que funcione en velocidad baja (silenciosa) la mayor parte del tiempo.</p>
+
+    <h2 id="filtros">Filtros: HEPA, carbón activo y prefiltro</h2>
+    <ul>
+      <li><strong>Filtro HEPA (H13 o superior):</strong> es el que retiene las partículas finas. Imprescindible; sin HEPA real, no es un purificador serio.</li>
+      <li><strong>Carbón activo:</strong> absorbe olores y gases (cocina, tabaco, mascotas). Si te importan los olores, que no falte.</li>
+      <li><strong>Prefiltro lavable:</strong> atrapa pelo y polvo grueso y alarga la vida del HEPA. Que se pueda lavar te ahorra dinero.</li>
+      <li><strong>Coste de recambios:</strong> el filtro es un gasto recurrente. Mira antes cuánto cuesta el repuesto y cada cuánto se cambia (suele ser cada 6-12 meses).</li>
+    </ul>
+
+    <h2 id="ruido">Nivel de ruido: los dB que importan de noche</h2>
+    <p>Un purificador se deja encendido muchas horas, a veces toda la noche. Si en velocidad baja suena demasiado, acabarás apagándolo.</p>
+    <ul>
+      <li><strong>Menos de 35 dB:</strong> apenas se oye, perfecto para dormir.</li>
+      <li><strong>35-45 dB:</strong> ruido de fondo suave, aceptable en el salón.</li>
+      <li><strong>Más de 50 dB (velocidad alta):</strong> normal solo para limpiar rápido; no para tenerlo así de continuo.</li>
+    </ul>
+
+    <h2 id="funciones">Funciones que marcan la diferencia</h2>
+    <ul>
+      <li><strong>Sensor de calidad del aire:</strong> mide las partículas y ajusta la velocidad solo. La función más útil.</li>
+      <li><strong>Modo automático:</strong> sube cuando el aire empeora y baja cuando mejora, sin que estés pendiente.</li>
+      <li><strong>Modo noche:</strong> velocidad mínima y luces apagadas.</li>
+      <li><strong>Aviso de cambio de filtro:</strong> te avisa cuando toca, para no respirar por un filtro saturado.</li>
+      <li><strong>Control por app:</strong> cómodo para programarlo o encenderlo antes de llegar a casa.</li>
+    </ul>
+
+    <h2 id="precio">¿Cuánto debería costar?</h2>
+    <ul>
+      <li><strong>60-120 €:</strong> modelos para habitación, con HEPA y poco más.</li>
+      <li><strong>120-250 €:</strong> el punto dulce. Buena cobertura, sensor automático y modo noche.</li>
+      <li><strong>250-400 €:</strong> gama alta, para salas grandes, más silenciosos y con mejores sensores.</li>
+    </ul>
+
+    <h2 id="recomendaciones">Nuestra selección</h2>
+    <p>Estamos analizando los primeros modelos de esta categoría. Puedes ver los que ya hemos revisado —con su tabla de especificaciones, puntuaciones y precio— en la página de purificadores.</p>
+
+    <div style="text-align:center;margin:2.5rem 0">
+      <a href="purificadores/index.html" class="btn btn-primary btn-lg">Ver los purificadores analizados</a>
+    </div>
+  </div>
+</section>
+</main>
+{footer_html()}
+{scripts_html()}'''
+
+    outpath = os.path.join(BASE, "guia-purificadores.html")
+    escribir(outpath, content)
+    print(f"  - guia-purificadores.html")
+
 # ── Guide: calefactores ────────────────────────────────────
 
 def build_guide_calefactores():
@@ -975,13 +1165,13 @@ def rebuild_db_js(products):
     import json as j
     db_data = {
         "productos": products,
-        "nichos": ["deshumidificadores", "calefactores"],
+        "nichos": ["deshumidificadores", "calefactores", "purificadores"],
         "categorias": [
             {"id": "deshumidificadores", "nombre": "Deshumidificadores", "slug": "deshumidificadores", "activa": True},
             {"id": "calefactores", "nombre": "Calefactores", "slug": "calefactores", "activa": True},
+            {"id": "purificadores", "nombre": "Purificadores", "slug": "purificadores", "activa": True},
             {"id": "aires-acondicionados", "nombre": "Aires Acondicionados", "slug": "aires-acondicionados", "activa": False},
             {"id": "ventiladores", "nombre": "Ventiladores", "slug": "ventiladores", "activa": False},
-            {"id": "purificadores", "nombre": "Purificadores de Aire", "slug": "purificadores", "activa": False},
         ],
         "scoreAxes": ["eficiencia", "silencio", "facilidad_uso", "capacidad", "calidad_precio"],
         "scoreLabels": {
@@ -994,6 +1184,7 @@ def rebuild_db_js(products):
         "compareSpecs": {
             "deshumidificadores": COMPARE_SPECS_DH,
             "calefactores": COMPARE_SPECS_CAL,
+            "purificadores": COMPARE_SPECS_PUR,
         },
         "updated": datetime.now().strftime("%Y-%m-%d")
     }
@@ -1008,9 +1199,9 @@ def rebuild_db_js(products):
 
 HOME_FEATURED = ["dh-001", "cal-003", "cal-004", "dh-002"]
 
-CATEGORY_ORDER = ["deshumidificadores", "calefactores"]
+CATEGORY_ORDER = ["deshumidificadores", "calefactores", "purificadores"]
 
-PROXIMAMENTE = ["Aires acondicionados", "Ventiladores", "Purificadores"]
+PROXIMAMENTE = ["Aires acondicionados", "Ventiladores"]
 
 
 def load_guias():
@@ -1442,6 +1633,7 @@ def build_sitemap(products, guias):
     urls.append(("comparador.html", today, "weekly", "0.6"))
     urls.append(("guia-deshumidificadores.html", today, "monthly", "0.7"))
     urls.append(("guia-calefactores.html", today, "monthly", "0.7"))
+    urls.append(("guia-purificadores.html", today, "monthly", "0.7"))
     urls.append(("sobre-nosotros.html", today, "yearly", "0.5"))
     for f in ("aviso-afiliados.html", "privacidad.html", "aviso-legal.html"):
         urls.append((f, today, "yearly", "0.3"))
@@ -1485,6 +1677,7 @@ def main():
     build_comparador()
     build_guide_deshumidificadores()
     build_guide_calefactores()
+    build_guide_purificadores()
     build_legal_pages()
 
     for g in guias:

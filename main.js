@@ -165,6 +165,7 @@
       var minCap = parseFloat(($("#filter-capacity") || {}).value || "0");
       var maxNoise = parseFloat(($("#filter-noise") || {}).value || "0");
       var minPotencia = parseFloat(($("#filter-potencia") || {}).value || "0");
+      var minCoverage = parseFloat(($("#filter-coverage") || {}).value || "0");
       var filterTipo = ($("#filter-tipo") || {}).value || "";
 
       var visible = 0;
@@ -178,6 +179,7 @@
         if (minCap > 0 && (prod.capacidad_litros_dia || 0) < minCap) show = false;
         if (maxNoise > 0 && (prod.ruido_db || 999) > maxNoise) show = false;
         if (minPotencia > 0 && (prod.potencia_w || 0) < minPotencia) show = false;
+        if (minCoverage > 0 && (prod.cobertura_m2 || 0) < minCoverage) show = false;
         if (filterTipo && (prod.subcategory || "") !== filterTipo) show = false;
         card.style.display = show ? "" : "none";
         if (show) visible++;
@@ -195,6 +197,8 @@
           if (sortBy === "precio-desc") return (pb.discountedPrice || pb.retailPrice || 0) - (pa.discountedPrice || pa.retailPrice || 0);
           if (sortBy === "capacidad") return (pb.capacidad_litros_dia || 0) - (pa.capacidad_litros_dia || 0);
           if (sortBy === "potencia") return (pb.potencia_w || 0) - (pa.potencia_w || 0);
+          if (sortBy === "cobertura") return (pb.cobertura_m2 || 0) - (pa.cobertura_m2 || 0);
+          if (sortBy === "cadr") return (pb.cadr || 0) - (pa.cadr || 0);
           if (sortBy === "silencio") return (pa.ruido_db || 99) - (pb.ruido_db || 99);
           if (sortBy === "valoracion") return (pb.valoracion_media || 0) - (pa.valoracion_media || 0);
           return 0;
