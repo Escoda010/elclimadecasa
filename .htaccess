@@ -71,6 +71,7 @@ Options -Indexes
 
   # Guía duplicada (versión antigua) -> la guía vigente del mismo tema
   RewriteRule ^guias/deshumidificador-dormitorio-silencioso\.html$ /guias/dormir-con-deshumidificador-ruido-dormitorio.html [R=301,L]
+  RewriteRule ^guias/purificador-aire-alergia-polen\.html$ /guias/purificador-aire-alergias.html [R=301,L]
 
   # URLs limpias: /guias/humedad sirve guias/humedad.html
   RewriteCond %{REQUEST_FILENAME} !-d
