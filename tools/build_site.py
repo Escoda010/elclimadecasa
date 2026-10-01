@@ -300,6 +300,8 @@ CATEGORY_CONFIG = {
         "guide_title": "Guía de compra de deshumidificadores",
         "seo_title": "Mejores deshumidificadores {año}: comparativa y opiniones",
         "h1": "Los mejores deshumidificadores de {año}",
+        "intro_titulo": "Cómo elegir un deshumidificador",
+        "intro": '<p>Lo primero es la capacidad, en litros al día. Para un dormitorio o un baño suelen bastar 10-12 litros; para un salón o un piso con humedad de verdad, 16-20. Ten en cuenta que esa cifra se mide a 30 °C y 80 % de humedad: en un invierno normal sacará bastante menos.</p><p>Después, el ruido. Si va a estar en el dormitorio, busca 40 dB o menos y un modo noche. Y el depósito: con 2-3 litros lo vaciarás a diario; si quieres olvidarte, que admita desagüe continuo con manguera.</p><p>Si en casa hace frío (por debajo de 15 °C), los de compresor rinden mal; ahí funcionan mejor los desecantes. Lo explicamos con más detalle en la <a href="../guia-deshumidificadores.html">guía de compra de deshumidificadores</a>.</p>',
         "meta_desc": "Los mejores deshumidificadores del mercado. Compara modelos por capacidad, precio, ruido y más.",
         "category_desc": "Compara los mejores deshumidificadores del mercado. Filtros por precio, capacidad y nivel de ruido para encontrar el modelo perfecto para tu hogar.",
         "subcategories": [],
@@ -319,6 +321,8 @@ CATEGORY_CONFIG = {
         "guide_title": "Guía de compra de calefactores",
         "seo_title": "Mejores calefactores {año}: comparativa y opiniones",
         "h1": "Los mejores calefactores de {año}",
+        "intro_titulo": "Cómo elegir un calefactor",
+        "intro": '<p>Todos los calefactores eléctricos convierten cada kilovatio que consumen en la misma cantidad de calor: no hay ninguno que gaste menos a igualdad de potencia. Lo que cambia la factura es cuánto tiempo está encendido, y ahí ayudan el termostato, el temporizador y una potencia acorde a la habitación.</p><p>Para calentar rápido un baño o un despacho durante un rato, un cerámico de 1.500-2.000 W es lo más práctico. Para mantener una habitación templada muchas horas, un radiador de aceite o un emisor térmico dan un calor más estable y silencioso. En el baño, que esté pensado para ese uso (con protección contra salpicaduras, por ejemplo IP24) y que se apague si vuelca.</p><p>Lo comparamos con números en la <a href="../guia-calefactores.html">guía de compra de calefactores</a> y en <a href="../guias/consumo-real-calefactor-electrico.html">cuánto gasta de verdad un calefactor eléctrico</a>.</p>',
         "meta_desc": "Los mejores calefactores para tu hogar: cerámicos, radiadores de aceite, paneles y estufas de cuarzo. Compara modelos y elige el tuyo.",
         "category_desc": "Compara los mejores calefactores del mercado. Filtros por precio, potencia y tipo para encontrar el calefactor perfecto para tu hogar.",
         "subcategories": SUBCATEGORIES_CAL,
@@ -338,6 +342,8 @@ CATEGORY_CONFIG = {
         "guide_title": "Guía de compra de purificadores de aire",
         "seo_title": "Mejores purificadores de aire {año}: comparativa y opiniones",
         "h1": "Los mejores purificadores de aire de {año}",
+        "intro_titulo": "Cómo elegir un purificador de aire",
+        "intro": '<p>Fíjate primero en el CADR (los metros cúbicos de aire limpio por hora), más que en los metros cuadrados que anuncia la caja. Como referencia, para un dormitorio de 12-15 m² valen 150-200 m³/h; para un salón de 30 m², unos 300 m³/h si lo quieres por alergias.</p><p>El filtro tiene que ser HEPA de verdad (H13 o mejor) para retener polen, ácaros y caspa de mascotas; si te preocupan los olores o el humo, que lleve también carbón activo. Y mira cuánto cuesta el recambio: es el gasto que tendrás cada 6-12 meses.</p><p>Si lo vas a usar de noche, busca un modo silencioso por debajo de 30 dB. Un purificador no quita la humedad: si tu problema es el moho o la condensación, lo que necesitas es un <a href="../deshumidificadores/">deshumidificador</a>. Más detalles en la <a href="../guia-purificadores.html">guía de compra de purificadores</a>.</p>',
         "meta_desc": "Los mejores purificadores de aire para tu hogar. Compara modelos por cobertura, CADR, filtro HEPA y nivel de ruido.",
         "category_desc": "Compara los mejores purificadores de aire del mercado. Filtros por precio, cobertura y nivel de ruido para encontrar el modelo ideal contra alergias, mascotas, humo o polvo.",
         "subcategories": [],
@@ -672,6 +678,39 @@ def build_ficha(p, all_products, guias=None):
 
 # ── Category index page ────────────────────────────────────
 
+def precio_de(p):
+    return p.get("discountedPrice") or p.get("retailPrice")
+
+
+def seleccion_rapida(cat_products):
+    """Picks calculados con los datos, solo entre productos con nota >= 7."""
+    import math
+    buenos = [p for p in cat_products if (nota_editor(p) or 0) >= 7 and precio_de(p)]
+    if len(buenos) < 3:
+        return []
+
+    def popularidad(p):
+        return (p.get("valoracion_media") or 0) * math.log10(10 + (p.get("resenas_cantidad") or 0))
+
+    criterios = [
+        ("Mejor en general", lambda p: (nota_editor(p), popularidad(p))),
+        ("Mejor calidad-precio", lambda p: (p.get("score_calidad_precio") or 0, nota_editor(p), -precio_de(p))),
+        ("El más económico", lambda p: (-precio_de(p), nota_editor(p))),
+        ("El más silencioso", lambda p: (-(p.get("ruido_db") or 999), nota_editor(p))),
+        ("Para estancias grandes", lambda p: (p.get("cobertura_m2") or 0, nota_editor(p))),
+    ]
+    usados, picks = set(), []
+    for etiqueta, clave in criterios:
+        if etiqueta == "El más silencioso" and sum(1 for p in buenos if not vacio(p.get("ruido_db"))) < 3:
+            continue
+        for p in sorted(buenos, key=clave, reverse=True):
+            if p["id"] not in usados:
+                usados.add(p["id"])
+                picks.append((etiqueta, p))
+                break
+    return picks
+
+
 def build_category(products, cat_key, guias=None):
     guias = guias or []
     cfg = CATEGORY_CONFIG[cat_key]
@@ -850,7 +889,33 @@ def build_category(products, cat_key, guias=None):
 </section>'''.format(t=esc(cfg["title"].lower()),
                      items=guide_list_items(cat_guias, depth=1))
 
-    ld_cat = jsonld(migas_ld([("Inicio", ""), (cfg["title"], f'{cfg["slug"]}/')]))
+    ld_lista = {"@context": "https://schema.org", "@type": "ItemList",
+                "itemListElement": [{"@type": "ListItem", "position": i + 1,
+                                     "url": abs_url(f'{cfg["slug"]}/{product_slug(p)}.html'),
+                                     "name": p["name"]} for i, p in enumerate(cat_products)]}
+    ld_cat = jsonld(migas_ld([("Inicio", ""), (cfg["title"], f'{cfg["slug"]}/')]),
+                    ld_lista if cat_products else None)
+    picks = seleccion_rapida(cat_products)
+    picks_html = ""
+    if picks:
+        items = ""
+        for etiqueta, pk in picks:
+            nota = nota_editor(pk)
+            motivo = pk.get("destacado_editorial") or ""
+            items += ('<li><strong>{e}:</strong> <a href="{h}.html">{nm}</a> · {pr} · nota {no}/10'
+                      '{m}</li>\n').format(e=esc(etiqueta), h=product_slug(pk), nm=esc(pk["name"]),
+                                           pr=format_price(precio_de(pk)),
+                                           no=str(nota).replace(".", ","),
+                                           m=(". " + esc(motivo)) if motivo else "")
+        picks_html = ('<section class="quick-picks"><div class="container">'
+                      '<h2>Selección rápida</h2><ul>' + items + '</ul>'
+                      '<p class="price-note">Precios orientativos de Amazon; pueden cambiar.</p>'
+                      '</div></section>')
+    intro_html = ""
+    if cfg.get("intro"):
+        intro_html = ('<section class="home-section category-intro"><div class="container container-narrow">'
+                      '<h2>' + esc(cfg.get("intro_titulo", "Cómo elegir")) + '</h2>' + cfg["intro"] +
+                      '</div></section>')
     año = datetime.now().year
     content = f'''{head_html(cfg["title"], cfg["meta_desc"], depth=1, canonical=f'{cfg["slug"]}/', extra_head=ld_cat, full_title=cfg["seo_title"].format(año=año))}
 {nav_html(cfg["nav_key"], depth=1)}
@@ -865,6 +930,7 @@ def build_category(products, cat_key, guias=None):
     <p style="color:var(--text-muted);max-width:600px">{esc(cfg["category_desc"])}</p>
   </div>
 </section>
+{picks_html}
 
 <section style="padding:0 0 3rem">
   <div class="container">
@@ -880,6 +946,7 @@ def build_category(products, cat_key, guias=None):
     </div>
   </div>
 </section>
+{intro_html}
 {guias_cat_html}
 </main>
 {footer_html(depth=1)}
@@ -1666,7 +1733,7 @@ def build_home(products, guias):
         head=head_html("El Clima de Casa", "Guías y comparativas independientes de deshumidificadores y calefactores para el hogar. Qué comprar, cuándo hace falta y qué modelo conviene en cada caso.",
                        canonical="", full_title="El Clima de Casa — Guías de climatización para tu hogar",
                        extra_head=jsonld({"@context": "https://schema.org", "@type": "WebSite", "name": "El Clima de Casa", "url": SITE_URL + "/", "inLanguage": "es-ES"},
-                                         dict(editor_ld(), **{"@context": "https://schema.org", "founder": autor_ld()}))),
+                                         dict(editor_ld(), **{"@context": "https://schema.org", "founder": autor_ld(), "sameAs": ["https://www.pinterest.es/elclimadecasa/"]}))),
         nav=nav_html("inicio"),
         guias=guide_list_items(guias, depth=0, limit=3),
         cats=cats,
