@@ -424,4 +424,22 @@
   } else {
     boot();
   }
+
+  // ── Medicion: clic hacia Amazon (lo unico que genera comision) ──
+  // Evento GA4 "clic_amazon" con la pagina de origen, para saber que paginas
+  // y que productos llevan a comprar.
+  document.addEventListener("click", function (e) {
+    var a = e.target && e.target.closest ? e.target.closest("a[href]") : null;
+    if (!a) return;
+    var href = a.getAttribute("href") || "";
+    if (!/amazon\.|amzn\.|link\.amazon/i.test(href)) return;
+    if (typeof window.gtag !== "function") return;
+    var ficha = document.querySelector("[data-ficha-radar]");
+    window.gtag("event", "clic_amazon", {
+      pagina: location.pathname,
+      producto: ficha ? ficha.getAttribute("data-ficha-radar") : "",
+      texto_enlace: (a.textContent || "").trim().slice(0, 60),
+      transport_type: "beacon"
+    });
+  }, true);
 })();
