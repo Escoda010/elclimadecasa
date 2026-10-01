@@ -265,6 +265,12 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 2.5rem 0; }
 }
 .guide-list li { margin: 0; }
 
+.editor-score {
+  margin: 0 0 1rem;
+  color: var(--text-muted);
+}
+.editor-score strong { color: var(--text); font-size: 1.15rem; }
+
 .related-guides {
   margin-top: 2.5rem;
   padding-top: 1.5rem;

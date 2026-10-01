@@ -181,6 +181,62 @@ def listar_remoto(ftp, raiz):
 
 # ── Publicación ─────────────────────────────────────────────
 
+# ── IndexNow (Bing, Yandex, Seznam, Naver...) ──────────────────
+# Avisa al momento de las URLs nuevas o cambiadas. Google no usa IndexNow:
+# para Google estan el sitemap y Search Console. La clave vive como fichero
+# <clave>.txt en la raiz del sitio (se sube con el resto).
+SITE_URL = "https://elclimadecasa.com"
+INDEXNOW_ENDPOINT = "https://api.indexnow.org/indexnow"
+
+
+def clave_indexnow():
+    import re
+    for nombre in os.listdir(BASE):
+        m = re.match(r"^([0-9a-f]{32})\.txt$", nombre)
+        if m:
+            with io.open(os.path.join(BASE, nombre), encoding="utf-8") as f:
+                if f.read().strip() == m.group(1):
+                    return m.group(1)
+    return None
+
+
+def ruta_a_url(rel):
+    if not rel.endswith(".html"):
+        return None
+    if rel == "index.html":
+        return SITE_URL + "/"
+    if rel.endswith("/index.html"):
+        return "{}/{}/".format(SITE_URL, rel[:-len("/index.html")])
+    return "{}/{}".format(SITE_URL, rel)
+
+
+def urls_del_sitemap():
+    import re
+    with io.open(os.path.join(BASE, "sitemap.xml"), encoding="utf-8") as f:
+        return re.findall(r"<loc>([^<]+)</loc>", f.read())
+
+
+def avisar_indexnow(urls):
+    """POST a IndexNow. Nunca hace fallar la publicacion."""
+    import urllib.request
+    urls = sorted({u for u in urls if u})
+    clave = clave_indexnow()
+    if not urls or not clave:
+        if not clave:
+            print("IndexNow: no hay fichero de clave en la raiz; no se avisa.")
+        return
+    cuerpo = json.dumps({"host": SITE_URL.split("//")[1], "key": clave,
+                         "keyLocation": "{}/{}.txt".format(SITE_URL, clave),
+                         "urlList": urls[:10000]}).encode("utf-8")
+    req = urllib.request.Request(INDEXNOW_ENDPOINT, data=cuerpo, method="POST",
+                                 headers={"Content-Type": "application/json; charset=utf-8"})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            print("IndexNow: {} URLs enviadas (HTTP {})".format(len(urls), r.status))
+    except Exception as e:
+        print("IndexNow: no se pudo avisar ({})".format(e))
+
+
 def main():
     ap = argparse.ArgumentParser(description="Publica el sitio por FTPS")
     ap.add_argument("--dry-run", action="store_true", help="no sube nada, solo informa")
@@ -189,7 +245,13 @@ def main():
     ap.add_argument("--git", action="store_true",
                     help="tras publicar, guarda los cambios en git y los envia a GitHub")
     ap.add_argument("--config", default=CONFIG_POR_DEFECTO)
+    ap.add_argument("--indexnow-todo", action="store_true",
+                    help="solo avisa a IndexNow de todas las URLs del sitemap y termina")
     args = ap.parse_args()
+
+    if args.indexnow_todo:
+        avisar_indexnow(urls_del_sitemap())
+        return
 
     cfg = cargar_config(args.config)
     raiz = "/" + cfg.get("carpeta_remota", "").strip("/")
@@ -300,6 +362,10 @@ def main():
             print("   {} -> {}".format(rel, e))
         sys.exit(1)
     print("Listo: https://elclimadecasa.com/")
+
+    # Solo las paginas que han cambiado de verdad (el CSS o el db.js no se indexan)
+    avisar_indexnow([ruta_a_url(rel) for rel in pendientes
+                     if rel not in [f for f, _ in fallos]])
 
     if args.git:
         guardar_en_git()

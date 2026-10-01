@@ -11,10 +11,114 @@ except Exception:
     pass
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-VER = datetime.now().strftime("%Y%m%d%H%M")
+def _version_estaticos():
+    """Cache-buster por CONTENIDO de styles.css y main.js, no por hora del build.
+    Asi una pagina solo cambia si cambia de verdad: el FTP sube solo eso y
+    IndexNow solo avisa de lo que es nuevo."""
+    import hashlib
+    h = hashlib.sha1()
+    for nombre in ("styles.css", "main.js"):
+        ruta = os.path.join(BASE, nombre)
+        if os.path.exists(ruta):
+            with open(ruta, "rb") as f:
+                h.update(f.read())
+    return h.hexdigest()[:10]
+
+VER = _version_estaticos()
 
 def esc(s):
     return htmlmod.escape(str(s)) if s is not None else ""
+
+def vacio(v):
+    """Dato que no conocemos: no se pinta nunca (ni 'None' ni 'No especificado')."""
+    if v is None:
+        return True
+    if isinstance(v, str) and v.strip().lower() in ("", "none", "null", "n/d", "no especificado", "-", "—"):
+        return True
+    if isinstance(v, (list, dict)) and not v:
+        return True
+    return False
+
+def chip(p, key, unit=""):
+    v = p.get(key)
+    return None if vacio(v) else f"{v}{unit}"
+
+def resenas_txt(p, plantilla="({n})"):
+    n = p.get("resenas_cantidad")
+    return "" if vacio(n) else plantilla.format(n=n)
+
+# ── Datos estructurados (JSON-LD) ──────────────────────────────
+
+SCORE_KEYS = ("score_eficiencia", "score_silencio", "score_facilidad_uso",
+              "score_capacidad", "score_calidad_precio")
+
+def nota_editor(p):
+    """Media de las puntuaciones del editor (1-10), o None si no hay."""
+    notas = [p[k] for k in SCORE_KEYS if isinstance(p.get(k), (int, float))]
+    return round(sum(notas) / len(notas), 1) if notas else None
+
+def abs_url(ruta):
+    return ruta if (ruta or "").startswith("http") else "{}/{}".format(SITE_URL, (ruta or "").lstrip("/"))
+
+def jsonld(*objetos):
+    """<script type=application/ld+json> por objeto; escapa '</' para no romper el HTML."""
+    salida = ""
+    for o in objetos:
+        if o:
+            txt = json.dumps(o, ensure_ascii=False).replace("</", "<\\/")
+            salida += '  <script type="application/ld+json">' + txt + '</script>\n'
+    return salida
+
+def autor_ld():
+    return {"@type": "Person", "name": "Jordi Escoda Sirvent",
+            "url": SITE_URL + "/sobre-nosotros.html"}
+
+def editor_ld():
+    return {"@type": "Organization", "name": "El Clima de Casa", "url": SITE_URL + "/"}
+
+def migas_ld(migas):
+    """migas: [(nombre, ruta_relativa)]; la ruta '' es la portada."""
+    return {"@context": "https://schema.org", "@type": "BreadcrumbList",
+            "itemListElement": [{"@type": "ListItem", "position": i + 1, "name": n,
+                                 "item": abs_url(r) if r else SITE_URL + "/"}
+                                for i, (n, r) in enumerate(migas)]}
+
+def producto_ld(p, url_rel):
+    o = {"@context": "https://schema.org", "@type": "Product",
+         "name": p["name"], "url": abs_url(url_rel),
+         "image": [abs_url(i) for i in (p.get("images") or [])[:3]],
+         "description": p.get("description", "")}
+    if not vacio(p.get("marca")):
+        o["brand"] = {"@type": "Brand", "name": p["marca"]}
+    if not vacio(p.get("asin")):
+        o["sku"] = p["asin"]
+    nota = nota_editor(p)
+    if nota is not None:
+        review = {"@type": "Review", "author": autor_ld(), "publisher": editor_ld(),
+                  "reviewRating": {"@type": "Rating", "ratingValue": nota,
+                                   "bestRating": 10, "worstRating": 1}}
+        pros = [x for x in (p.get("pros") or []) if not vacio(x)]
+        contras = [x for x in (p.get("contras") or []) if not vacio(x)]
+        if pros:
+            review["positiveNotes"] = {"@type": "ItemList", "itemListElement": [
+                {"@type": "ListItem", "position": i + 1, "name": t} for i, t in enumerate(pros)]}
+        if contras:
+            review["negativeNotes"] = {"@type": "ItemList", "itemListElement": [
+                {"@type": "ListItem", "position": i + 1, "name": t} for i, t in enumerate(contras)]}
+        o["review"] = review
+    return o
+
+def articulo_ld(titulo, desc, url_rel, imagen="", fecha=None, fecha_mod=None):
+    o = {"@context": "https://schema.org", "@type": "Article",
+         "headline": titulo[:110], "description": desc,
+         "mainEntityOfPage": abs_url(url_rel), "author": autor_ld(), "publisher": editor_ld(),
+         "inLanguage": "es-ES"}
+    if imagen:
+        o["image"] = [abs_url(imagen)]
+    if fecha:
+        o["datePublished"] = fecha
+        o["dateModified"] = fecha_mod or fecha
+    return o
 
 def load_products():
     with open(os.path.join(BASE, "datos", "productos.json"), "r", encoding="utf-8") as f:
@@ -28,17 +132,20 @@ def bool_html(v):
     if v: return '<span class="spec-bool-yes">Sí</span>'
     return '<span class="spec-bool-no">No</span>'
 
-def product_img(p, idx=0, cls="", depth=0):
+def product_img(p, idx=0, cls="", depth=0, lazy=True):
     prefix = "../" * depth
     imgs = p.get("images", [])
     if imgs and idx < len(imgs):
         src = imgs[idx] if imgs[idx].startswith("http") else prefix + imgs[idx]
         alt = esc(p["name"])
         c = f' class="{cls}"' if cls else ""
-        return f'<img src="{src}" alt="{alt}" loading="lazy" width="400" height="400"{c}>'
+        carga = 'loading="lazy"' if lazy else 'fetchpriority="high"'
+        return f'<img src="{src}" alt="{alt}" {carga} width="400" height="400"{c}>'
     return '<div class="img-placeholder">Sin imagen</div>'
 
 def stars_html(rating):
+    if vacio(rating):
+        return ""
     full = int(rating)
     half = (rating - full) >= 0.25
     s = "★" * full
@@ -191,13 +298,15 @@ CATEGORY_CONFIG = {
         "compare_specs": COMPARE_SPECS_DH,
         "guide_slug": "guia-deshumidificadores",
         "guide_title": "Guía de compra de deshumidificadores",
+        "seo_title": "Mejores deshumidificadores {año}: comparativa y opiniones",
+        "h1": "Los mejores deshumidificadores de {año}",
         "meta_desc": "Los mejores deshumidificadores del mercado. Compara modelos por capacidad, precio, ruido y más.",
         "category_desc": "Compara los mejores deshumidificadores del mercado. Filtros por precio, capacidad y nivel de ruido para encontrar el modelo perfecto para tu hogar.",
         "subcategories": [],
         "chips": lambda p: [
-            f'{p.get("capacidad_litros_dia","—")} L/día',
-            f'{p.get("cobertura_m2","—")} m²',
-            f'{p.get("ruido_db","—")} dB',
+            chip(p, "capacidad_litros_dia", " L/día"),
+            chip(p, "cobertura_m2", " m²"),
+            chip(p, "ruido_db", " dB"),
         ],
     },
     "calefactores": {
@@ -208,13 +317,15 @@ CATEGORY_CONFIG = {
         "compare_specs": COMPARE_SPECS_CAL,
         "guide_slug": "guia-calefactores",
         "guide_title": "Guía de compra de calefactores",
+        "seo_title": "Mejores calefactores {año}: comparativa y opiniones",
+        "h1": "Los mejores calefactores de {año}",
         "meta_desc": "Los mejores calefactores para tu hogar: cerámicos, radiadores de aceite, paneles y estufas de cuarzo. Compara modelos y elige el tuyo.",
         "category_desc": "Compara los mejores calefactores del mercado. Filtros por precio, potencia y tipo para encontrar el calefactor perfecto para tu hogar.",
         "subcategories": SUBCATEGORIES_CAL,
         "chips": lambda p: [
-            p.get("tipo_calefactor", "—"),
-            f'{p.get("potencia_w","—")} W',
-            f'{p.get("cobertura_m2","—")} m²',
+            chip(p, "tipo_calefactor"),
+            chip(p, "potencia_w", " W"),
+            chip(p, "cobertura_m2", " m²"),
         ],
     },
     "purificadores": {
@@ -225,13 +336,15 @@ CATEGORY_CONFIG = {
         "compare_specs": COMPARE_SPECS_PUR,
         "guide_slug": "guia-purificadores",
         "guide_title": "Guía de compra de purificadores de aire",
+        "seo_title": "Mejores purificadores de aire {año}: comparativa y opiniones",
+        "h1": "Los mejores purificadores de aire de {año}",
         "meta_desc": "Los mejores purificadores de aire para tu hogar. Compara modelos por cobertura, CADR, filtro HEPA y nivel de ruido.",
         "category_desc": "Compara los mejores purificadores de aire del mercado. Filtros por precio, cobertura y nivel de ruido para encontrar el modelo ideal contra alergias, mascotas, humo o polvo.",
         "subcategories": [],
         "chips": lambda p: [
-            f'{p.get("cobertura_m2","—")} m²',
-            f'{p.get("cadr","—")} m³/h',
-            f'{p.get("ruido_db","—")} dB',
+            chip(p, "cobertura_m2", " m²"),
+            chip(p, "cadr", " m³/h"),
+            chip(p, "ruido_db", " dB"),
         ],
     },
 }
@@ -321,7 +434,7 @@ FAVICON = (
 )
 
 
-def head_html(title, desc, depth=0, canonical=None, og_image="", og_type="website", full_title=None):
+def head_html(title, desc, depth=0, canonical=None, og_image="", og_type="website", full_title=None, extra_head=""):
     prefix = "../" * depth
     page_title = full_title if full_title else "{} — El Clima de Casa".format(title)
     og = ""
@@ -354,14 +467,16 @@ def head_html(title, desc, depth=0, canonical=None, og_image="", og_type="websit
     gtag('js', new Date());
     gtag('config', 'G-DP24YW5N8Z');
   </script>
-</head>
+{extra_head}</head>
 <body>
 <a href="#main" class="skip-link">Ir al contenido</a>"""
 
 
 def scripts_html(depth=0):
     prefix = "../" * depth
-    return f"""<script defer src="{prefix}lib/db.js?v={VER}"></script>
+    # db.js va sin version: el .htaccess le pone no-cache, asi que el navegador
+    # siempre revalida, y un cambio de precio no obliga a reescribir todas las paginas.
+    return f"""<script defer src="{prefix}lib/db.js"></script>
 <script defer src="{prefix}main.js?v={VER}"></script>
 </body>
 </html>"""
@@ -374,17 +489,16 @@ def spec_table_html(p):
     fields = CATEGORY_CONFIG.get(cat, {}).get("spec_fields", SPEC_FIELDS_DH)
     rows = ""
     for group_name, field_list in fields:
-        rows += f'<tr class="spec-group-header"><td colspan="2">{esc(group_name)}</td></tr>\n'
+        group_rows = ""
         for label, key, unit in field_list:
             val = p.get(key)
-            if unit is None:
-                cell = bool_html(val)
-            elif val is None or val == "":
-                cell = "—"
-            else:
-                cell = f"{esc(val)}{unit}"
-            rows += f'<tr><th>{esc(label)}</th><td>{cell}</td></tr>\n'
-    extras = p.get("specs_extra", {})
+            if vacio(val):
+                continue  # dato desconocido: mejor no enseñarlo que poner "None" o un "No" falso
+            cell = bool_html(val) if unit is None else f"{esc(val)}{unit}"
+            group_rows += f'<tr><th>{esc(label)}</th><td>{cell}</td></tr>\n'
+        if group_rows:
+            rows += f'<tr class="spec-group-header"><td colspan="2">{esc(group_name)}</td></tr>\n' + group_rows
+    extras = {k: v for k, v in (p.get("specs_extra") or {}).items() if not vacio(v)}
     if extras:
         rows += '<tr class="spec-group-header"><td colspan="2">Otros datos</td></tr>\n'
         for k, v in extras.items():
@@ -460,7 +574,18 @@ def build_ficha(p, all_products, guias=None):
         guias_para_producto(guias, p, limit=3), depth=1,
         titulo="Guías relacionadas", pie_html=pie_guias)
 
-    content = f'''{head_html(p["name"], p.get("description",""), depth=1, canonical=f'{cfg["slug"]}/{slug}.html', og_image=(p.get("images") or [""])[0], og_type="product")}
+    url_ficha = f'{cfg["slug"]}/{slug}.html'
+    ld_ficha = jsonld(
+        producto_ld(p, url_ficha),
+        migas_ld([("Inicio", ""), (cfg["title"], f'{cfg["slug"]}/'), (p["name"], url_ficha)]))
+    nota = nota_editor(p)
+    nota_html = (f'<p class="editor-score">Nota del editor: <strong>{str(nota).replace(".", ",")}/10</strong></p>'
+                 if nota is not None else "")
+
+    titulo_ficha = f'{p["name"]}: opiniones y análisis'
+    if len(titulo_ficha) + len(" — El Clima de Casa") <= 65:
+        titulo_ficha += " — El Clima de Casa"
+    content = f'''{head_html(p["name"], p.get("description",""), depth=1, canonical=url_ficha, full_title=titulo_ficha, og_image=(p.get("images") or [""])[0], og_type="product", extra_head=ld_ficha)}
 {nav_html(cfg["nav_key"], depth=1)}
 <main id="main">
 <section class="ficha">
@@ -474,14 +599,14 @@ def build_ficha(p, all_products, guias=None):
     <div class="ficha-top">
       <div class="ficha-gallery">
         {offer_badge}
-        {product_img(p, 0, "ficha-main-img", depth=1)}
+        {product_img(p, 0, "ficha-main-img", depth=1, lazy=False)}
       </div>
       <div class="ficha-info">
         <div class="ficha-brand">{esc(p["marca"])}</div>
         <h1>{esc(p["name"])}</h1>
         <div>
-          <span class="stars">{stars_html(p.get("valoracion_media",0))}</span>
-          <span class="stars-count">({p.get("resenas_cantidad",0)} valoraciones en Amazon)</span>
+          <span class="stars">{stars_html(p.get("valoracion_media"))}</span>
+          <span class="stars-count">{resenas_txt(p, "({n} valoraciones en Amazon)")}</span>
         </div>
         <div class="ficha-buy-block">
           <div class="price-block">
@@ -500,6 +625,7 @@ def build_ficha(p, all_products, guias=None):
 
     <section class="radar-section">
       <h2>Valoración del editor</h2>
+      {nota_html}
       <div class="radar-wrap">
         <div data-ficha-radar="{p["id"]}"></div>
         <p class="radar-note">Puntuaciones del equipo editorial (0-10). No representan una medida oficial.</p>
@@ -561,7 +687,7 @@ def build_category(products, cat_key, guias=None):
             pct = round(100 * (1 - p["discountedPrice"] / p["retailPrice"]))
             badge = f'<span class="badge badge-offer">-{pct}%</span>'
 
-        chips = cfg["chips"](p)
+        chips = [c for c in cfg["chips"](p) if c]
         chips_html = "".join(f'<span class="product-card-chip">{esc(c)}</span>' for c in chips)
 
         cards += f'''<article class="product-card" data-product-id="{p["id"]}">
@@ -581,7 +707,7 @@ def build_category(products, cat_key, guias=None):
         <span class="price-current">{format_price(price)}</span>
         {"<span class='price-original'>" + format_price(p["retailPrice"]) + "</span>" if has_offer else ""}
       </div>
-      <span class="stars">{stars_html(p.get("valoracion_media",0))} <span class="stars-count">({p.get("resenas_cantidad",0)})</span></span>
+      <span class="stars">{stars_html(p.get("valoracion_media"))} <span class="stars-count">{resenas_txt(p)}</span></span>
     </div>
     <div class="price-note">Precio orientativo · Consulta en Amazon · {p.get("precio_fecha","")}</div>
   </div>
@@ -724,7 +850,9 @@ def build_category(products, cat_key, guias=None):
 </section>'''.format(t=esc(cfg["title"].lower()),
                      items=guide_list_items(cat_guias, depth=1))
 
-    content = f'''{head_html(cfg["title"], cfg["meta_desc"], depth=1, canonical=f'{cfg["slug"]}/')}
+    ld_cat = jsonld(migas_ld([("Inicio", ""), (cfg["title"], f'{cfg["slug"]}/')]))
+    año = datetime.now().year
+    content = f'''{head_html(cfg["title"], cfg["meta_desc"], depth=1, canonical=f'{cfg["slug"]}/', extra_head=ld_cat, full_title=cfg["seo_title"].format(año=año))}
 {nav_html(cfg["nav_key"], depth=1)}
 <main id="main">
 <section class="page-header">
@@ -733,7 +861,7 @@ def build_category(products, cat_key, guias=None):
       <a href="../index.html">Inicio</a> <span class="breadcrumb-sep">/</span>
       <span>{esc(cfg["title"])}</span>
     </nav>
-    <h1>{esc(cfg["title"])}</h1>
+    <h1>{esc(cfg["h1"].format(año=año))}</h1>
     <p style="color:var(--text-muted);max-width:600px">{esc(cfg["category_desc"])}</p>
   </div>
 </section>
@@ -797,7 +925,7 @@ def build_comparador():
 # ── Guide: deshumidificadores ──────────────────────────────
 
 def build_guide_deshumidificadores():
-    content = f'''{head_html("Cómo elegir el mejor deshumidificador para tu hogar", "Guía completa para elegir deshumidificador: capacidad, ruido, funciones, precio y más. Todo lo que necesitas saber antes de comprar.", canonical="guia-deshumidificadores.html", og_type="article")}
+    content = f'''{head_html("Cómo elegir el mejor deshumidificador para tu hogar", "Guía completa para elegir deshumidificador: capacidad, ruido, funciones, precio y más. Todo lo que necesitas saber antes de comprar.", canonical="guia-deshumidificadores.html", og_type="article", extra_head=jsonld(articulo_ld("Cómo elegir el mejor deshumidificador para tu hogar", "Guía completa para elegir deshumidificador: capacidad, ruido, funciones, precio y más. Todo lo que necesitas saber antes de comprar.", "guia-deshumidificadores.html"), migas_ld([("Inicio", ""), ("Cómo elegir el mejor deshumidificador para tu hogar", "guia-deshumidificadores.html")])))}
 {nav_html("guias")}
 <main id="main">
 <section class="guide">
@@ -880,7 +1008,7 @@ def build_guide_deshumidificadores():
 # ── Guide: purificadores ───────────────────────────────────
 
 def build_guide_purificadores():
-    content = f'''{head_html("Cómo elegir el mejor purificador de aire para tu hogar", "Guía para elegir purificador de aire: cobertura, CADR, filtro HEPA, ruido y precio. Todo lo que conviene saber antes de comprar.", canonical="guia-purificadores.html", og_type="article")}
+    content = f'''{head_html("Cómo elegir el mejor purificador de aire para tu hogar", "Guía para elegir purificador de aire: cobertura, CADR, filtro HEPA, ruido y precio. Todo lo que conviene saber antes de comprar.", canonical="guia-purificadores.html", og_type="article", extra_head=jsonld(articulo_ld("Cómo elegir el mejor purificador de aire para tu hogar", "Guía para elegir purificador de aire: cobertura, CADR, filtro HEPA, ruido y precio. Todo lo que conviene saber antes de comprar.", "guia-purificadores.html"), migas_ld([("Inicio", ""), ("Cómo elegir el mejor purificador de aire para tu hogar", "guia-purificadores.html")])))}
 {nav_html("guias")}
 <main id="main">
 <section class="guide">
@@ -969,7 +1097,7 @@ def build_guide_purificadores():
 # ── Guide: calefactores ────────────────────────────────────
 
 def build_guide_calefactores():
-    content = f'''{head_html("Cómo elegir el mejor calefactor para tu hogar", "Guía completa para elegir calefactor: cerámicos, radiadores de aceite, paneles y estufas de cuarzo. Todo lo que necesitas saber antes de comprar.", canonical="guia-calefactores.html", og_type="article")}
+    content = f'''{head_html("Cómo elegir el mejor calefactor para tu hogar", "Guía completa para elegir calefactor: cerámicos, radiadores de aceite, paneles y estufas de cuarzo. Todo lo que necesitas saber antes de comprar.", canonical="guia-calefactores.html", og_type="article", extra_head=jsonld(articulo_ld("Cómo elegir el mejor calefactor para tu hogar", "Guía completa para elegir calefactor: cerámicos, radiadores de aceite, paneles y estufas de cuarzo. Todo lo que necesitas saber antes de comprar.", "guia-calefactores.html"), migas_ld([("Inicio", ""), ("Cómo elegir el mejor calefactor para tu hogar", "guia-calefactores.html")])))}
 {nav_html("guias")}
 <main id="main">
 <section class="guide">
@@ -1332,7 +1460,11 @@ def build_guia(guia, products, guias=None):
 {footer}
 {scripts}""".format(
         head=head_html(guia["title"], guia["meta_desc"], depth=1, canonical=canonical,
-                       og_image=guide_og_image(guia, products), og_type="article"),
+                       og_image=guide_og_image(guia, products), og_type="article",
+                       extra_head=jsonld(
+                           articulo_ld(guia["title"], guia["meta_desc"], canonical,
+                                       guide_og_image(guia, products), guia.get("fecha")),
+                           migas_ld([("Inicio", ""), ("Guías", "guias/"), (guia["title"], canonical)]))),
         nav=nav_html("guias", depth=1),
         cat=esc(guia.get("categoria", "Guía")),
         title=esc(guia["title"]),
@@ -1466,13 +1598,13 @@ def home_card(p):
     <p class="product-card-desc">{desc}</p>
     <div class="product-card-footer">
       <div class="price-block"><span class="price-current">{price}</span></div>
-      <span class="stars">{stars} <span class="stars-count">({res})</span></span>
+      <span class="stars">{stars} <span class="stars-count">{res}</span></span>
     </div>
   </div>
 </article>
 """.format(img=product_img(p, 0, depth=0), marca=esc(p["marca"]), href=product_href(p, depth=0),
            name=esc(p["name"]), desc=esc(p.get("description", "")), price=format_price(price),
-           stars=stars_html(p.get("valoracion_media", 0)), res=p.get("resenas_cantidad", 0))
+           stars=stars_html(p.get("valoracion_media")), res=resenas_txt(p))
 
 
 def build_home(products, guias):
@@ -1532,7 +1664,9 @@ def build_home(products, guias):
 {footer}
 {scripts}""".format(
         head=head_html("El Clima de Casa", "Guías y comparativas independientes de deshumidificadores y calefactores para el hogar. Qué comprar, cuándo hace falta y qué modelo conviene en cada caso.",
-                       canonical="", full_title="El Clima de Casa — Guías de climatización para tu hogar"),
+                       canonical="", full_title="El Clima de Casa — Guías de climatización para tu hogar",
+                       extra_head=jsonld({"@context": "https://schema.org", "@type": "WebSite", "name": "El Clima de Casa", "url": SITE_URL + "/", "inLanguage": "es-ES"},
+                                         dict(editor_ld(), **{"@context": "https://schema.org", "founder": autor_ld()}))),
         nav=nav_html("inicio"),
         guias=guide_list_items(guias, depth=0, limit=3),
         cats=cats,
@@ -1627,9 +1761,12 @@ def build_sitemap(products, guias):
         urls.append(("guias/{}.html".format(g["slug"]), g.get("fecha", today), "monthly", "0.8"))
     for key in CATEGORY_ORDER:
         cfg = CATEGORY_CONFIG[key]
-        urls.append(("{}/".format(cfg["slug"]), today, "weekly", "0.9"))
-        for p in [x for x in products if x["category"] == key]:
-            urls.append(("{}/{}.html".format(cfg["slug"], product_slug(p)), today, "monthly", "0.7"))
+        cat_prods = [x for x in products if x["category"] == key]
+        fechas = [x.get("precio_fecha") for x in cat_prods if not vacio(x.get("precio_fecha"))]
+        urls.append(("{}/".format(cfg["slug"]), max(fechas) if fechas else today, "weekly", "0.9"))
+        for p in cat_prods:
+            urls.append(("{}/{}.html".format(cfg["slug"], product_slug(p)),
+                         p.get("precio_fecha") or today, "weekly", "0.8"))
     urls.append(("comparador.html", today, "weekly", "0.6"))
     urls.append(("guia-deshumidificadores.html", today, "monthly", "0.7"))
     urls.append(("guia-calefactores.html", today, "monthly", "0.7"))
@@ -1688,10 +1825,8 @@ def main():
     build_sobre_nosotros()
     build_sitemap(products, guias)
 
-    dh_count = len([p for p in products if p["category"] == "deshumidificadores"])
-    cal_count = len([p for p in products if p["category"] == "calefactores"])
-    print("\nBuild completo: {} fichas, 2 categorías, {} guías, comparador, portada y legales".format(
-        dh_count + cal_count, len(guias)))
+    print("\nBuild completo: {} fichas, {} categorías, {} guías, comparador, portada y legales".format(
+        len(products), len(CATEGORY_CONFIG), len(guias)))
     print("   Cache-buster: ?v={}".format(VER))
 
 
