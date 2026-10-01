@@ -462,6 +462,8 @@ def head_html(title, desc, depth=0, canonical=None, og_image="", og_type="websit
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{esc(page_title)}</title>
   <meta name="description" content="{esc(desc)}">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+  <meta name="twitter:card" content="summary_large_image">
 {og}  <link rel="stylesheet" href="{prefix}styles.css?v={VER}">
   <link rel="icon" href="{FAVICON}">
   <meta name="p:domain_verify" content="447a4061b72017eac6ae92ec67a035cb"/>
