@@ -69,6 +69,9 @@ Options -Indexes
   RewriteRule ^cuanto-cuesta-instalar-aire-acondicionado/?$ - [G,L]
   RewriteRule ^conductos-vs-split/?$                       - [G,L]
 
+  # Guía duplicada (versión antigua) -> la guía vigente del mismo tema
+  RewriteRule ^guias/deshumidificador-dormitorio-silencioso\.html$ /guias/dormir-con-deshumidificador-ruido-dormitorio.html [R=301,L]
+
   # URLs limpias: /guias/humedad sirve guias/humedad.html
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteCond %{REQUEST_FILENAME}.html -f
