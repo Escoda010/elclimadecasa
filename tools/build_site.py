@@ -421,6 +421,7 @@ def footer_html(depth=0):
       <li><a href="{prefix}calefactores/index.html">Calefactores</a></li>
       <li><a href="{prefix}purificadores/index.html">Purificadores</a></li>
       <li><a href="{prefix}comparador.html">Comparador</a></li>
+      <li><a href="{prefix}test-humedad.html">Test de humedad</a></li>
       <li><a href="{prefix}sobre-nosotros.html">Sobre nosotros</a></li>
       <li><a href="{prefix}aviso-afiliados.html">Aviso de afiliación</a></li>
       <li><a href="{prefix}privacidad.html">Privacidad</a></li>
@@ -1822,6 +1823,452 @@ def build_sobre_nosotros():
 
 # ── Sitemap ──────────────────────────────────
 
+# ── Test de humedad ─────────────────────────────────────────
+
+# (pregunta, [(etiqueta, puntos, clave), ...])
+TEST_PREGUNTAS = [
+    ("Por las mañanas, ¿hay agua en los cristales de las ventanas?", "condensacion", [
+        ("No, nunca", 0, ""),
+        ("Solo algún día de mucho frío", 1, ""),
+        ("Varias mañanas por semana", 3, "condensa"),
+        ("Casi todos los días, y el agua cae al alféizar", 5, "condensa_mucho"),
+    ]),
+    ("¿Notas olor a cerrado o a humedad?", "olor", [
+        ("No, la casa huele normal", 0, ""),
+        ("Solo dentro de un armario o de un cuarto que uso poco", 2, "olor_armario"),
+        ("Se nota al entrar en casa después de unas horas fuera", 4, "olor_casa"),
+        ("Siempre, y la ropa guardada coge ese olor", 6, "olor_fuerte"),
+    ]),
+    ("¿Hay manchas, moho o pintura levantada en alguna pared o techo?", "manchas", [
+        ("Nada de eso", 0, ""),
+        ("Alguna mancha pequeña en el techo del baño", 2, "mancha_bano"),
+        ("Manchas oscuras en esquinas o detrás de los muebles", 5, "moho"),
+        ("Pintura abombada, papel despegado o la pared mancha al tocarla", 7, "estructural"),
+    ]),
+    ("¿Cómo ventilas y dónde tiendes la ropa?", "habitos", [
+        ("Abro las ventanas a diario y tiendo fuera", 0, ""),
+        ("Ventilo casi todos los días", 1, ""),
+        ("En invierno apenas abro las ventanas", 3, "poca_ventilacion"),
+        ("Tiendo dentro de casa y casi nunca ventilo", 5, "tiende_dentro"),
+    ]),
+    ("¿Cómo es la vivienda?", "vivienda", [
+        ("Piso en altura, soleado y con ventanas modernas", 0, ""),
+        ("Un piso normal, ni especialmente bueno ni malo", 1, ""),
+        ("Bajo o entresuelo, o con habitaciones que dan a un patio interior", 3, "planta_baja"),
+        ("Casa antigua, planta baja o con semisótano", 4, "antigua"),
+    ]),
+    ("¿En qué zona vives?", "zona", [
+        ("Interior seco: Madrid, Castilla, Aragón, Extremadura", 0, ""),
+        ("Zona intermedia, o no sabría decirlo", 1, ""),
+        ("Costa mediterránea o Andalucía", 2, "costa"),
+        ("Norte atlántico: Galicia, Asturias, Cantabria, País Vasco", 3, "norte"),
+    ]),
+]
+
+# (clave, limite_superior, titulo, color, texto)
+TEST_NIVELES = [
+    ("ok", 5, "Sin problema de humedad",
+     "Por lo que cuentas, tu casa está dentro de lo normal. No necesitas comprar "
+     "nada: con seguir ventilando como hasta ahora es suficiente."),
+    ("leve", 10, "Humedad leve",
+     "Hay alguna señal, pero de momento es cosa de hábitos más que de aparatos. "
+     "Antes de gastar dinero, mide: un higrómetro cuesta unos diez euros y te dice "
+     "si de verdad pasas del 60 %."),
+    ("moderado", 18, "Humedad moderada",
+     "Tu casa tiene un problema real de exceso de humedad. A este nivel ventilar "
+     "ayuda pero ya no basta, sobre todo en invierno, y es cuando un "
+     "deshumidificador compensa de verdad."),
+    ("grave", 99, "Humedad alta",
+     "Las señales que marcas apuntan a un exceso de humedad importante y mantenido "
+     "en el tiempo. Aquí hay dos cosas que hacer: bajar la humedad del aire y "
+     "averiguar de dónde sale el agua, porque si solo haces lo primero el problema "
+     "vuelve."),
+]
+
+# Fuera de la escala de puntos: si la pared está dañada, el problema no es el aire.
+TEST_ESTRUCTURAL = (
+    "estructural", "Esto no parece condensación",
+    "Has marcado que hay pintura abombada, papel despegado o una pared que mancha al "
+    "tocarla. Eso ya no es vapor condensando en una superficie fría: es agua líquida "
+    "metiéndose en el muro, por capilaridad desde el suelo, por una filtración desde "
+    "fuera o por una fuga. Te lo digo claro porque cambia qué tienes que hacer.")
+
+
+def test_opciones_html():
+    """Las preguntas van en HTML de verdad para que Google las lea."""
+    out = ""
+    for i, (texto, clave, opciones) in enumerate(TEST_PREGUNTAS):
+        ops = ""
+        for j, (etiqueta, puntos, marca) in enumerate(opciones):
+            ops += (
+                '<label class="quiz-option">'
+                '<input type="radio" name="q{i}" value="{p}" data-mark="{m}">'
+                '<span>{t}</span></label>'
+            ).format(i=i, p=puntos, m=esc(marca), t=esc(etiqueta)) + NL
+        out += (
+            '<fieldset class="quiz-q" data-q="{i}">'
+            '<legend><span class="quiz-num">{n}</span> {q}</legend>'
+            '<div class="quiz-options">{ops}</div>'
+            '</fieldset>'
+        ).format(i=i, n=i + 1, q=esc(texto), ops=ops) + NL
+    return out
+
+
+TEST_JS = """
+(function () {
+  var form = document.getElementById('quiz-form');
+  if (!form) return;
+  var box = document.getElementById('quiz-resultado');
+  var btn = document.getElementById('quiz-enviar');
+  var aviso = document.getElementById('quiz-aviso');
+  var total = TEST_NUM_PREGUNTAS;
+  var empezado = false;
+
+  function track(nombre, params) {
+    if (typeof window.gtag === 'function') { window.gtag('event', nombre, params || {}); }
+  }
+
+  form.addEventListener('change', function () {
+    if (!empezado) { empezado = true; track('test_humedad_inicio'); }
+    if (aviso) { aviso.textContent = ''; }
+    var hechas = form.querySelectorAll('input[type=radio]:checked').length;
+    btn.textContent = hechas < total
+      ? 'Ver resultado (' + hechas + ' de ' + total + ')'
+      : 'Ver resultado';
+  });
+
+  btn.addEventListener('click', function () {
+    var puntos = 0, marcas = [], faltan = [];
+    for (var i = 0; i < total; i++) {
+      var sel = form.querySelector('input[name=q' + i + ']:checked');
+      if (!sel) { faltan.push(i); continue; }
+      puntos += parseInt(sel.value, 10);
+      if (sel.getAttribute('data-mark')) { marcas.push(sel.getAttribute('data-mark')); }
+    }
+    if (faltan.length) {
+      aviso.textContent = faltan.length === 1
+        ? 'Te falta la pregunta ' + (faltan[0] + 1) + '.'
+        : 'Te faltan ' + faltan.length + ' preguntas por responder.';
+      var primera = form.querySelector('[data-q="' + faltan[0] + '"]');
+      if (primera) { primera.scrollIntoView({ block: 'center' }); }
+      return;
+    }
+
+    var nivel = NIVELES[NIVELES.length - 1];
+    for (var k = 0; k < NIVELES.length; k++) {
+      if (puntos <= NIVELES[k].max) { nivel = NIVELES[k]; break; }
+    }
+    // Una pared danada no se mide con la escala de humedad ambiental.
+    if (marcas.indexOf('estructural') !== -1) { nivel = NIVEL_ESTRUCTURAL; }
+
+    var notas = [];
+    function tiene(m) { return marcas.indexOf(m) !== -1; }
+    if (tiene('tiende_dentro')) {
+      notas.push('Tender la ropa dentro suelta entre dos y tres litros de agua al aire por colada. ' +
+        'Es, casi siempre, la mayor fuente de humedad de una casa, y lo que m\u00e1s r\u00e1pido se nota al cambiarlo.');
+    }
+    if (tiene('olor_fuerte') || tiene('moho')) {
+      notas.push('El olor a cerrado y las manchas oscuras significan que ya hay moho creciendo en alg\u00fan ' +
+        'sitio, aunque no lo veas entero. Limpiar la mancha sin bajar la humedad solo lo retrasa.');
+    }
+    if (tiene('condensa_mucho') && !tiene('estructural')) {
+      notas.push('Que el agua llegue a caer al alf\u00e9izar casi siempre apunta a ventanas fr\u00edas, no a una ' +
+        'pared mala: el aire caliente de dentro suelta el agua al tocar el cristal.');
+    }
+    if (tiene('norte')) {
+      notas.push('En la cornisa cant\u00e1brica la humedad del aire exterior ya es alta de por s\u00ed, as\u00ed que ' +
+        'ventilar ayuda menos que en el interior y el deshumidificador trabaja m\u00e1s horas.');
+    }
+    if (tiene('poca_ventilacion') && !tiene('tiende_dentro')) {
+      notas.push('Diez minutos de ventana abierta en cruz, dos veces al d\u00eda, renuevan el aire sin enfriar ' +
+        'las paredes. Enfr\u00eda el aire, que se recalienta en seguida, no los muros.');
+    }
+
+    var html = '';
+    html += '<div class="quiz-result-head quiz-' + nivel.id + '">';
+    html += '<p class="quiz-result-label">Resultado</p>';
+    html += '<p class="quiz-result-title">' + nivel.titulo + '</p>';
+    if (!nivel.sinPuntos) {
+      html += '<p class="quiz-result-score">' + puntos + ' puntos sobre ' + MAX_PUNTOS + '</p>';
+    }
+    html += '</div>';
+    html += '<div class="quiz-result-body">';
+    html += '<p>' + nivel.texto + '</p>';
+    for (var n = 0; n < notas.length; n++) { html += '<p>' + notas[n] + '</p>'; }
+    html += nivel.recomendacion;
+    html += '<div class="quiz-share"><p class="quiz-share-t">Comparte tu resultado</p><div class="quiz-share-btns">';
+    var txt = encodeURIComponent('Mi casa ha salido con "' + nivel.titulo.toLowerCase() +
+      '" en este test de humedad. \u00bfY la tuya?');
+    var url = encodeURIComponent(PAGINA_URL);
+    html += '<a class="quiz-share-b" rel="nofollow noopener" target="_blank" href="https://api.whatsapp.com/send?text=' + txt + '%20' + url + '">WhatsApp</a>';
+    html += '<a class="quiz-share-b" rel="nofollow noopener" target="_blank" href="https://twitter.com/intent/tweet?text=' + txt + '&url=' + url + '">X</a>';
+    html += '<a class="quiz-share-b" rel="nofollow noopener" target="_blank" href="https://pinterest.com/pin/create/button/?url=' + url + '&description=' + txt + '">Pinterest</a>';
+    html += '<button type="button" class="quiz-share-b" id="quiz-copiar">Copiar enlace</button>';
+    html += '</div></div>';
+    html += '<p class="quiz-redo"><button type="button" id="quiz-repetir">Volver a hacer el test</button></p>';
+    html += '</div>';
+
+    box.innerHTML = html;
+    box.hidden = false;
+    box.scrollIntoView({ block: 'start' });
+    track('test_humedad_resultado', { nivel: nivel.id, puntos: puntos });
+
+    var copiar = document.getElementById('quiz-copiar');
+    if (copiar) {
+      copiar.addEventListener('click', function () {
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(PAGINA_URL).then(function () {
+            copiar.textContent = 'Enlace copiado';
+          }, function () { copiar.textContent = PAGINA_URL; });
+        } else { copiar.textContent = PAGINA_URL; }
+      });
+    }
+    var repetir = document.getElementById('quiz-repetir');
+    if (repetir) {
+      repetir.addEventListener('click', function () {
+        form.reset();
+        box.hidden = true;
+        box.innerHTML = '';
+        btn.textContent = 'Ver resultado';
+        form.scrollIntoView({ block: 'start' });
+      });
+    }
+  });
+})();
+"""
+
+
+def test_recomendacion(nivel_id, products):
+    """El bloque de producto de cada nivel. En 'ok' no se recomienda nada."""
+    def ficha(pid, texto):
+        p = product_by_id(products, pid)
+        if not p:
+            return ""
+        return '<li><a href="{}">{}</a> — {}</li>'.format(
+            product_href(p, depth=0), esc(p["name"]), texto)
+
+    if nivel_id == "estructural":
+        return ('<p>Lo que yo haría, por este orden:</p><ol>'
+                '<li>Mirar qué hay justo al otro lado de esa pared: la calle, un baño, '
+                'un patio, el piso de arriba. Casi siempre la pista está ahí.</li>'
+                '<li>Fijarte en la forma de la mancha. Si sube desde el rodapié en una '
+                'franja horizontal, suele ser capilaridad. Si baja desde el techo o sale '
+                'de un punto concreto, suele ser una fuga.</li>'
+                '<li>Que lo vea alguien en persona antes de gastar en aparatos. Si es una '
+                'fuga, arreglarla cuesta mucho menos que convivir con ella.</li>'
+                '<li>Si eres inquilino, avisar por escrito al propietario: los daños '
+                'estructurales le corresponden a él.</li>'
+                '</ol><p>Un deshumidificador te hará la casa más llevadera mientras tanto y '
+                'frenará el moho, pero no va a parar el agua que entra. Para distinguir qué '
+                'tienes, te sirve <a href="guias/condensacion-o-capilaridad-diagnostico.html">'
+                'condensación o capilaridad: cómo distinguirlas</a>; y si ya hay manchas '
+                'negras, <a href="guias/moho-armario-muebles-sin-obra.html">cómo tratar el '
+                'moho</a>.</p>')
+
+    if nivel_id == "ok":
+        return ('<p class="quiz-nobuy">No te hace falta ningún aparato. Si alguna vez '
+                'cambian las cosas, en la <a href="guias/senales-exceso-humedad.html">guía '
+                'de señales de exceso de humedad</a> tienes qué vigilar.</p>')
+
+    if nivel_id == "leve":
+        return ('<p>Lo que haría yo en tu caso, por orden:</p><ol>'
+                '<li>Comprar un higrómetro barato y mirar qué marca por la mañana.</li>'
+                '<li>Ventilar diez minutos en cruz al levantarte.</li>'
+                '<li>Si tiendes dentro, probar un mes a tender fuera o con extractor.</li>'
+                '</ol><p>Si pasado un mes el higrómetro sigue por encima del 60 %, entonces '
+                'sí toca mirar un <a href="deshumidificadores/index.html">deshumidificador</a>. '
+                'Te lo explico en '
+                '<a href="guias/que-capacidad-deshumidificador-litros-necesito.html">qué '
+                'capacidad necesitas</a>.</p>')
+
+    if nivel_id == "moderado":
+        items = (ficha("dh-002", "compacto, suficiente para un dormitorio o un salón pequeño")
+                 + ficha("dh-004", "para cubrir una vivienda de tamaño medio")
+                 + ficha("dh-008", "con control desde el móvil, útil si quieres programarlo"))
+        return ('<p>Para este nivel va bien un equipo de 12 a 16 litros al día. Estos tres '
+                'son los que mejor encajan de los que he analizado:</p><ul class="quiz-prods">'
+                + items + '</ul>'
+                '<p>Antes de elegir, mira '
+                '<a href="guias/que-capacidad-deshumidificador-litros-necesito.html">qué '
+                'capacidad necesitas según los metros</a> y '
+                '<a href="guias/donde-colocar-deshumidificador-casa.html">dónde colocarlo</a>.</p>')
+
+    items = (ficha("dh-001", "20 L/día y Wi-Fi, para toda la vivienda")
+             + ficha("dh-007", "20 L/día, la opción más ajustada de precio")
+             + ficha("dh-009", "20 L/día con desagüe continuo, para no vaciar el depósito"))
+    return ('<p>A este nivel se queda corto cualquier aparato pequeño: hace falta un equipo '
+            'de 20 litros al día o más, y probablemente funcionando muchas horas las primeras '
+            'semanas.</p><ul class="quiz-prods">' + items + '</ul>'
+            '<p>Y en paralelo, lo importante: averiguar de dónde viene el agua. Te ayuda '
+            '<a href="guias/condensacion-o-capilaridad-diagnostico.html">distinguir condensación '
+            'de capilaridad</a>, que son problemas distintos con soluciones distintas.</p>')
+
+
+def build_test_humedad(products):
+    canonical = "test-humedad.html"
+    titulo = "Test: ¿tu casa tiene un problema de humedad?"
+    desc = ("Seis preguntas para saber si la humedad de tu casa es normal o se te está "
+            "yendo de las manos, y qué hacer en cada caso. Sin registro y en un minuto.")
+
+    niveles_js = []
+    for nid, mx, tit, txt in TEST_NIVELES:
+        niveles_js.append(
+            '{{id:"{id}",max:{mx},titulo:{tit},texto:{txt},recomendacion:{rec}}}'.format(
+                id=nid, mx=mx, tit=json.dumps(tit, ensure_ascii=False),
+                txt=json.dumps(txt, ensure_ascii=False),
+                rec=json.dumps(test_recomendacion(nid, products), ensure_ascii=False)))
+
+    eid, etit, etxt = TEST_ESTRUCTURAL
+    estructural_js = '{{id:"{id}",titulo:{tit},texto:{txt},recomendacion:{rec},sinPuntos:true}}'.format(
+        id=eid, tit=json.dumps(etit, ensure_ascii=False),
+        txt=json.dumps(etxt, ensure_ascii=False),
+        rec=json.dumps(test_recomendacion(eid, products), ensure_ascii=False))
+
+    max_puntos = sum(max(o[1] for o in q[2]) for q in TEST_PREGUNTAS)
+
+    datos_js = (
+        "var TEST_NUM_PREGUNTAS = {n};" + NL +
+        "var MAX_PUNTOS = {mx};" + NL +
+        "var PAGINA_URL = {url};" + NL +
+        "var NIVELES = [{niv}];" + NL +
+        "var NIVEL_ESTRUCTURAL = {est};"
+    ).format(n=len(TEST_PREGUNTAS), mx=max_puntos,
+             url=json.dumps(SITE_URL + "/" + canonical),
+             niv=",".join(niveles_js), est=estructural_js)
+
+    faq_ld = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {"@type": "Question",
+             "name": "¿Cuál es el nivel de humedad normal en una casa?",
+             "acceptedAnswer": {"@type": "Answer", "text":
+                "Entre el 40 % y el 60 % de humedad relativa. Por debajo del 40 % el aire "
+                "reseca las vías respiratorias; por encima del 60 % empiezan a aparecer "
+                "condensación, ácaros y moho."}},
+            {"@type": "Question",
+             "name": "¿Cómo sé si tengo humedad por condensación o por capilaridad?",
+             "acceptedAnswer": {"@type": "Answer", "text":
+                "La condensación aparece arriba: en cristales, en esquinas de techo y "
+                "detrás de muebles pegados a paredes exteriores, y empeora en invierno. La "
+                "capilaridad sube desde el suelo, deja una franja horizontal en la parte "
+                "baja de la pared y no depende tanto de la estación."}},
+            {"@type": "Question",
+             "name": "¿Un deshumidificador quita el moho de las paredes?",
+             "acceptedAnswer": {"@type": "Answer", "text":
+                "No. Un deshumidificador baja la humedad del aire, que es lo que alimenta al "
+                "moho, pero no limpia la mancha que ya existe. Hay que limpiar el moho aparte "
+                "y después mantener la humedad entre el 40 % y el 60 % para que no vuelva."}},
+        ],
+    }
+
+    content = """{head}
+{nav}
+<main id="main">
+<article class="article">
+  <div class="container article-content">
+    <nav class="breadcrumb">
+      <a href="index.html">Inicio</a> <span class="breadcrumb-sep">/</span>
+      <span>Test de humedad</span>
+    </nav>
+    <header class="article-header">
+      <h1>¿Tu casa tiene un problema de humedad?</h1>
+    </header>
+    <p class="article-lead">La humedad no avisa: se nota cuando ya hay una mancha en la
+    esquina o la ropa del armario huele raro. Estas seis preguntas son las mismas que haría
+    yo si me escribieras preguntándome qué comprar. Tardas un minuto, no hay que registrarse
+    y a veces la respuesta es que no te hace falta nada.</p>
+
+    <form id="quiz-form" class="quiz">
+{preguntas}
+      <p class="quiz-aviso" id="quiz-aviso" role="status"></p>
+      <button type="button" class="btn btn-cta quiz-enviar" id="quiz-enviar">Ver resultado</button>
+    </form>
+
+    <div id="quiz-resultado" class="quiz-result" hidden></div>
+
+    <div class="article-body">
+      <h2>Qué significa cada señal</h2>
+      <p>Las seis preguntas no son al azar: cada una mide algo distinto. Te cuento qué hay
+      detrás, porque entenderlo vale más que el resultado del test.</p>
+
+      <h3>El agua en los cristales</h3>
+      <p>Es la señal más temprana y la más fácil de ver. El aire caliente de dentro de casa
+      lleva vapor de agua; cuando toca un cristal frío lo suelta ahí, igual que un vaso de
+      agua fría «suda» en verano. Que pase algún día de mucho frío es normal. Que pase casi
+      todas las mañanas significa que hay demasiado vapor dando vueltas por la casa.</p>
+
+      <h3>El olor a cerrado</h3>
+      <p>Ese olor característico no lo produce la humedad en sí, lo producen los hongos
+      creciendo en algún sitio: detrás de un armario, bajo un rodapié, dentro de un colchón.
+      Si lo notas al volver a casa después de unas horas fuera, es que está extendido; dentro
+      de casa dejas de percibirlo en pocos minutos.</p>
+
+      <h3>Las manchas y la pintura</h3>
+      <p>Aquí está la pregunta que más pesa en el resultado, porque distingue dos problemas
+      muy distintos. Manchas oscuras en esquinas altas y detrás de muebles: condensación, se
+      arregla bajando la humedad del aire. Pintura abombada, papel que se despega o pared que
+      mancha los dedos: ahí hay agua líquida entrando por el muro, y eso no lo arregla ningún
+      aparato.</p>
+
+      <h3>Ventilar y tender</h3>
+      <p>Una colada tendida dentro de casa suelta al aire entre dos y tres litros de agua.
+      Cocinar y ducharse suman otro par de litros al día, y las personas que viven en la casa
+      aportan alrededor de un litro cada una solo por respirar y sudar. Todo eso tiene que
+      salir por algún sitio.</p>
+
+      <h3>La vivienda y la zona</h3>
+      <p>Una planta baja, un semisótano o una habitación que da a un patio interior parten con
+      desventaja: menos sol, menos corriente de aire y paredes más frías. Y la zona importa
+      más de lo que parece: en Galicia o Asturias el aire de la calle ya viene cargado, así
+      que abrir la ventana no seca tanto como en Madrid.</p>
+
+      <h2>El rango que deberías mantener</h2>
+      <p>Entre el <strong>40 % y el 60 % de humedad relativa</strong>. Por debajo del 40 % el
+      aire reseca la garganta y la piel. Por encima del 60 % empiezan a vivir cómodos los
+      ácaros, y pasado el 70 % ya crece moho en cualquier superficie fría. Un higrómetro de
+      diez euros te lo dice, y es la compra más rentable que puedes hacer antes de gastarte
+      nada en un aparato.</p>
+
+      <h2>Preguntas frecuentes</h2>
+      <h3>¿El test guarda mis respuestas?</h3>
+      <p>No. Todo el cálculo se hace en tu navegador y no se envía nada a ningún sitio. Si
+      cierras la página, no queda nada.</p>
+
+      <h3>¿Un deshumidificador quita el moho que ya tengo?</h3>
+      <p>No. Baja la humedad del aire, que es lo que alimenta al moho, pero la mancha que ya
+      está en la pared hay que limpiarla aparte. Lo que evita es que vuelva a salir.</p>
+
+      <h3>¿Y si me sale «sin problema» pero yo noto humedad?</h3>
+      <p>Hazle caso a lo que ves antes que al test. Seis preguntas no cubren todos los casos:
+      una fuga lenta en una tubería o una filtración desde el piso de arriba pueden dar pocos
+      síntomas de los que pregunto aquí y ser un problema serio igualmente.</p>
+    </div>
+
+    {relacionadas}
+  </div>
+</article>
+</main>
+{footer}
+<script>{datos}{js}</script>
+{scripts}""".format(
+        head=head_html(titulo, desc, depth=0, canonical=canonical,
+                       full_title="Test: ¿tu casa tiene problema de humedad?",
+                       extra_head=jsonld(faq_ld, migas_ld([
+                           ("Inicio", ""), ("Test de humedad", canonical)]))),
+        nav=nav_html("", depth=0),
+        preguntas=test_opciones_html(),
+        relacionadas="",
+        footer=footer_html(depth=0),
+        datos=datos_js,
+        js=TEST_JS,
+        scripts=scripts_html(depth=0),
+    )
+
+    escribir(os.path.join(BASE, "test-humedad.html"), content)
+    print("  - test-humedad.html")
+
+
 def build_sitemap(products, guias):
     today = datetime.now().strftime("%Y-%m-%d")
     urls = [("", today, "weekly", "1.0")]
@@ -1840,6 +2287,7 @@ def build_sitemap(products, guias):
     urls.append(("guia-deshumidificadores.html", today, "monthly", "0.7"))
     urls.append(("guia-calefactores.html", today, "monthly", "0.7"))
     urls.append(("guia-purificadores.html", today, "monthly", "0.7"))
+    urls.append(("test-humedad.html", today, "monthly", "0.8"))
     urls.append(("sobre-nosotros.html", today, "yearly", "0.5"))
     for f in ("aviso-afiliados.html", "privacidad.html", "aviso-legal.html"):
         urls.append((f, today, "yearly", "0.3"))
@@ -1892,6 +2340,7 @@ def main():
 
     build_home(products, guias)
     build_sobre_nosotros()
+    build_test_humedad(products)
     build_sitemap(products, guias)
 
     print("\nBuild completo: {} fichas, {} categorías, {} guías, comparador, portada y legales".format(

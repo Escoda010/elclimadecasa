@@ -836,3 +836,126 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 2.5rem 0; }
   .nav, .nav-mobile, .site-tagline, .footer, .filters-bar { display: none; }
   body { font-size: 12pt; }
 }
+
+/* ── Test de humedad ──────────────────────────────────────── */
+
+.quiz {
+  max-width: var(--max-w-text);
+  margin: 2.5rem 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem 1.5rem 1.5rem;
+  background: var(--bg-soft);
+}
+.quiz-q { border: 0; padding: 0; margin: 0 0 1.9rem; }
+.quiz-q:last-of-type { margin-bottom: 1.2rem; }
+.quiz-q legend {
+  font-weight: 700;
+  font-size: 1.02rem;
+  color: #1f2937;
+  line-height: 1.45;
+  margin-bottom: .7rem;
+  padding: 0;
+}
+.quiz-num {
+  display: inline-block;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  line-height: 1.5rem;
+  text-align: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: .8rem;
+  margin-right: .45rem;
+}
+.quiz-options { display: grid; gap: .4rem; }
+.quiz-option {
+  display: flex;
+  align-items: flex-start;
+  gap: .6rem;
+  padding: .6rem .75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  line-height: 1.5;
+}
+.quiz-option:hover { border-color: var(--border-strong); }
+.quiz-option input { margin: .35rem 0 0; flex-shrink: 0; accent-color: var(--accent); }
+.quiz-option:has(input:checked) { border-color: var(--accent); background: #f0f5f8; }
+.quiz-option:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; }
+.quiz-enviar { margin-top: .5rem; }
+.btn-cta { background: var(--cta); border-color: var(--cta); color: #fff; }
+.btn-cta:hover { background: var(--cta-hover); border-color: var(--cta-hover); color: #fff; }
+.quiz-aviso { color: #b4452c; font-size: .92rem; min-height: 1.4em; margin: 0 0 .3rem; }
+
+.quiz-result {
+  max-width: var(--max-w-text);
+  margin: 2rem 0 2.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.quiz-result-head { padding: 1.25rem 1.5rem; border-left: 5px solid var(--accent); }
+.quiz-result-label {
+  margin: 0 0 .15rem;
+  font-size: .76rem;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.quiz-result-title { margin: 0 0 .2rem; font-size: 1.4rem; font-weight: 700; color: #1f2937; }
+.quiz-result-score { margin: 0; color: var(--text-muted); font-size: .92rem; }
+.quiz-ok       { background: #eef7f5; border-left-color: #4ecdc4; }
+.quiz-leve     { background: #fdf6ec; border-left-color: #f4a261; }
+.quiz-moderado { background: #fdf0ea; border-left-color: #e8734a; }
+.quiz-grave    { background: #fbeae6; border-left-color: #b4452c; }
+.quiz-result-body { padding: 1.4rem 1.5rem 1.1rem; background: var(--bg); }
+.quiz-result-body > p:last-child { margin-bottom: 0; }
+.quiz-nobuy {
+  border-left: 3px solid #4ecdc4;
+  padding-left: .9rem;
+  color: var(--text-muted);
+}
+.quiz-prods { list-style: none; padding: 0; margin: 0 0 1.15em; }
+.quiz-prods li {
+  padding: .6rem 0;
+  border-bottom: 1px solid var(--border);
+  line-height: 1.55;
+}
+.quiz-prods li:last-child { border-bottom: 0; }
+.quiz-prods a { font-weight: 600; }
+
+.quiz-share { margin-top: 1.6rem; padding-top: 1.1rem; border-top: 1px solid var(--border); }
+.quiz-share-t { margin: 0 0 .6rem; font-weight: 600; font-size: .95rem; }
+.quiz-share-btns { display: flex; flex-wrap: wrap; gap: .5rem; }
+.quiz-share-b {
+  display: inline-block;
+  padding: .45rem .9rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--accent);
+  font-size: .88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.quiz-share-b:hover { background: var(--bg-soft); border-color: var(--accent); color: var(--accent); }
+.quiz-redo { margin: 1.2rem 0 0; }
+.quiz-redo button {
+  color: var(--text-muted);
+  font-size: .9rem;
+  text-decoration: underline;
+  padding: 0;
+}
+.quiz-redo button:hover { color: var(--accent); }
+
+@media (max-width: 600px) {
+  .quiz { padding: 1.25rem 1rem 1.1rem; }
+  .quiz-result-head, .quiz-result-body { padding-left: 1.1rem; padding-right: 1.1rem; }
+  .quiz-result-title { font-size: 1.22rem; }
+  .quiz-share-btns { gap: .4rem; }
+  .quiz-share-b { flex: 1 1 auto; text-align: center; }
+}
+.quiz-estructural { background: #fbeae6; border-left-color: #b4452c; }
