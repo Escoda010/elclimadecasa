@@ -74,7 +74,8 @@ def autor_ld():
             "url": SITE_URL + "/sobre-nosotros.html"}
 
 def editor_ld():
-    return {"@type": "Organization", "name": "El Clima de Casa", "url": SITE_URL + "/"}
+    return {"@type": "Organization", "name": "El Clima de Casa",
+            "url": SITE_URL + "/", "logo": SITE_URL + "/favicon-512.png"}
 
 def migas_ld(migas):
     """migas: [(nombre, ruta_relativa)]; la ruta '' es la portada."""
@@ -433,11 +434,13 @@ def footer_html(depth=0):
 </footer>"""
 
 
+# Favicon como archivos reales (no data: URI: Google NO usa los data: para el
+# icono de resultados). Rutas root-absolutas, iguales a cualquier profundidad.
 FAVICON = (
-    "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'>"
-    "<rect width='32' height='32' rx='5' fill='%231b4965'/>"
-    "<path d='M16 7v12' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'/>"
-    "<circle cx='16' cy='23' r='3' fill='%23ffffff'/></svg>"
+    '<link rel="icon" href="/favicon.svg" type="image/svg+xml">\n'
+    '  <link rel="icon" href="/favicon-48.png" sizes="48x48" type="image/png">\n'
+    '  <link rel="icon" href="/favicon-96.png" sizes="96x96" type="image/png">\n'
+    '  <link rel="apple-touch-icon" href="/apple-touch-icon.png">'
 )
 
 
@@ -466,7 +469,7 @@ def head_html(title, desc, depth=0, canonical=None, og_image="", og_type="websit
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
   <meta name="twitter:card" content="summary_large_image">
 {og}  <link rel="stylesheet" href="{prefix}styles.css?v={VER}">
-  <link rel="icon" href="{FAVICON}">
+  {FAVICON}
   <meta name="p:domain_verify" content="447a4061b72017eac6ae92ec67a035cb"/>
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-DP24YW5N8Z"></script>
@@ -892,6 +895,11 @@ def build_category(products, cat_key, guias=None):
 </section>'''.format(t=esc(cfg["title"].lower()),
                      items=guide_list_items(cat_guias, depth=1))
 
+    # Índice compacto de las guías de las demás categorías: da a cada guía un
+    # enlace interno desde esta categoría (que Google ya rastrea).
+    guias_otras_html = guide_index_html(
+        guias, depth=1, titulo="Más guías de El Clima de Casa", excluir_cat=cat_key)
+
     ld_lista = {"@context": "https://schema.org", "@type": "ItemList",
                 "itemListElement": [{"@type": "ListItem", "position": i + 1,
                                      "url": abs_url(f'{cfg["slug"]}/{product_slug(p)}.html'),
@@ -951,6 +959,7 @@ def build_category(products, cat_key, guias=None):
 </section>
 {intro_html}
 {guias_cat_html}
+{guias_otras_html}
 </main>
 {footer_html(depth=1)}
 {scripts_html(depth=1)}'''
@@ -1609,6 +1618,54 @@ def guias_relacionadas_html(subset, depth, titulo="Guías relacionadas", pie_htm
     </section>'''.format(titulo=esc(titulo), lista=lista, pie=pie_html)
 
 
+def guide_index_html(guias, depth=0, titulo="Todas las guías", excluir_cat=None):
+    """Índice compacto (solo títulos) de todas las guías, agrupado por categoría.
+
+    Se coloca en la portada y en las categorías —las páginas que Google ya
+    rastrea— para que cada guía reciba enlaces internos desde ellas y así se
+    descubra y recrastree sin depender de solicitarlo a mano en Search Console.
+    """
+    if not guias:
+        return ""
+    prefix = "../" * depth
+    titulos_cat = {CATEGORY_CONFIG[k]["title"] for k in CATEGORY_CONFIG}
+    grupos = []
+    for key in CATEGORY_ORDER:
+        if key == excluir_cat:
+            continue
+        titulo_cat = CATEGORY_CONFIG[key]["title"]
+        del_cat = [g for g in guias if g.get("categoria") == titulo_cat]
+        if del_cat:
+            grupos.append((titulo_cat, del_cat))
+    otras = [g for g in guias if g.get("categoria") not in titulos_cat]
+    if otras:
+        grupos.append(("Más guías", otras))
+    if not grupos:
+        return ""
+    bloques = ""
+    for cat_titulo, gs in grupos:
+        enlaces = "".join(
+            '          <li><a href="{prefix}guias/{slug}.html">{title}</a></li>\n'.format(
+                prefix=prefix, slug=g["slug"], title=esc(g["title"]))
+            for g in gs)
+        bloques += '''        <div class="guide-index-group">
+          <h3>{cat}</h3>
+          <ul>
+{enlaces}          </ul>
+        </div>
+'''.format(cat=esc(cat_titulo), enlaces=enlaces)
+    return '''  <section class="home-section guide-index">
+    <div class="container">
+      <div class="home-section-head">
+        <h2>{titulo}</h2>
+      </div>
+      <div class="guide-index-cols">
+{bloques}      </div>
+    </div>
+  </section>
+'''.format(titulo=esc(titulo), bloques=bloques)
+
+
 def build_guias_index(guias):
     items = guide_list_items(guias, depth=1)
 
@@ -1730,6 +1787,7 @@ def build_home(products, guias):
   </section>
 
 </div>
+{guide_index}
 </main>
 {footer}
 {scripts}""".format(
@@ -1739,6 +1797,7 @@ def build_home(products, guias):
                                          dict(editor_ld(), **{"@context": "https://schema.org", "founder": autor_ld(), "sameAs": ["https://www.pinterest.es/elclimadecasa/"]}))),
         nav=nav_html("inicio"),
         guias=guide_list_items(guias, depth=0, limit=3),
+        guide_index=guide_index_html(guias, depth=0),
         cats=cats,
         cards=cards,
         footer=footer_html(),

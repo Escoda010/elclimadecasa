@@ -67,6 +67,7 @@ Options -Indexes
   RewriteRule ^category/                                   - [G,L]
   RewriteRule ^cuantas-frigorias-necesito/?$               - [G,L]
   RewriteRule ^cuanto-cuesta-instalar-aire-acondicionado/?$ - [G,L]
+  RewriteRule ^cuanto-consume-aire-acondicionado/?$        - [G,L]
   RewriteRule ^conductos-vs-split/?$                       - [G,L]
 
   # Guía duplicada (versión antigua) -> la guía vigente del mismo tema

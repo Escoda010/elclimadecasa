@@ -959,3 +959,21 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 2.5rem 0; }
   .quiz-share-b { flex: 1 1 auto; text-align: center; }
 }
 .quiz-estructural { background: #fbeae6; border-left-color: #b4452c; }
+
+/* Índice compacto de guías (portada y páginas de categoría) */
+.guide-index-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.4rem 2rem;
+}
+.guide-index-group h3 {
+  font-size: .9rem;
+  margin: 0 0 .5rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.guide-index-group ul { list-style: none; margin: 0; padding: 0; }
+.guide-index-group li { margin: 0 0 .4rem; line-height: 1.35; }
+.guide-index-group a { color: var(--accent); }
+.guide-index-group a:hover { text-decoration: underline; }
