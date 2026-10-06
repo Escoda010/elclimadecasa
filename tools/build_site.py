@@ -471,6 +471,8 @@ def head_html(title, desc, depth=0, canonical=None, og_image="", og_type="websit
 {og}  <link rel="stylesheet" href="{prefix}styles.css?v={VER}">
   {FAVICON}
   <meta name="p:domain_verify" content="447a4061b72017eac6ae92ec67a035cb"/>
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3619241757820313" crossorigin="anonymous"></script>
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-DP24YW5N8Z"></script>
   <script>
